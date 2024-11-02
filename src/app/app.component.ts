@@ -5,9 +5,9 @@ import { RouterOutlet } from '@angular/router';
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  template: `
+<!--    <app-navbar />-->
+    <router-outlet />
+  `
 })
-export class AppComponent {
-  title = 'trading-platform';
-}
+export class AppComponent {}
