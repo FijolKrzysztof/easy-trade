@@ -1,27 +1,81 @@
-# TradingPlatform
+# EasyTrade - Modern Trading Learning Platform Demo
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.2.11.
+EasyTrade is a modern, intuitive trading platform designed for beginners to learn and practice stock trading. The application features a clean interface, educational resources, and risk-free trading simulation to help users build confidence in trading mechanics and market understanding.
 
-## Development server
+## Demo
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+🌐 [Live Demo](https://fijolkrzysztof.github.io/easy-trade/)
 
-## Code scaffolding
+## Purpose
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+This platform aims to:
+- 🎯 Introduce beginners to stock market trading
+- 🛡️ Provide safe environment for practice
+- 📚 Teach basic trading concepts
+- 🎮 Enable risk-free trading simulation
+- 🚀 Build trading confidence
 
-## Build
+## Core Features
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+### Trading Interface
+- 💰 Persistent balance and portfolio tracking
+- 🔄 Quick and intuitive stock trading
+- 📈 Interactive market charts
+- 🥧 Visual portfolio breakdown
 
-## Running unit tests
+### Learning Tools
+- 📖 Comprehensive trading guides
+- 📚 Stock market dictionary
+- 🎓 Practice portfolio simulation
+- 💡 Trading tips and strategies
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+### Community
+- 👥 Beginner-friendly forum
+- 👨‍🏫 Expert trader profiles
+- 💭 Trading advice section
 
-## Running end-to-end tests
+### Smart Features
+- 🔔 Customizable price alerts
+- 📅 Market event reminders
+- ✉️ Transaction notifications
+- 🎯 Performance tracking
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+## Tech Stack
 
-## Further help
+- Angular 18
+- Node.js 20
+- npm 10
+- Tailwind CSS
+- PrimeNG Icons
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Getting Started
+
+### Prerequisites
+- Node.js (v20 or higher)
+- npm (v10 or higher)
+
+### Installation
+
+1. Clone the repository
+```bash
+git clone https://github.com/fijolkrzysztof/easytrade.git
+cd easytrade
+```
+
+2. Install dependencies
+```bash
+npm install
+```
+
+3. Start the development server
+```bash
+ng serve
+```
+
+4. Open your browser and navigate to `http://localhost:4200/easy-trade`
+
+Note: This is a demo version and features listed are planned functionality. Not all features may be currently implemented.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
