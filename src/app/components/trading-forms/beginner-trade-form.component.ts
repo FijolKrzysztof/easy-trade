@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CommissionInfoComponent } from '../comission-info/comission-info.component';
@@ -51,7 +51,11 @@ import { CommissionInfoComponent } from '../comission-info/comission-info.compon
 
       <div class="mb-4"></div>
 
-      <app-commission-info level="beginner" [estimatedValue]="estimatedValue" />
+      <app-commission-info
+        level="beginner"
+        [estimatedValue]="estimatedValue"
+        [amount]="tradeForm.get('amount')?.value || 0"
+      />
 
       <div class="flex space-x-2">
         <button
@@ -75,38 +79,34 @@ import { CommissionInfoComponent } from '../comission-info/comission-info.compon
   `
 })
 export class BeginnerTradeFormComponent implements OnInit {
-  @Input() tradeForm!: FormGroup;
   @Output() submitOrder = new EventEmitter<{ type: 'buy' | 'sell'; data: any }>();
 
+  tradeForm: FormGroup;
   estimatedValue: number = 0;
 
-  constructor(private fb: FormBuilder) {}
+  constructor(private fb: FormBuilder) {
+    this.tradeForm = this.fb.group({
+      symbol: ['', [
+        Validators.required,
+        Validators.pattern('^[A-Z]{1,5}$')
+      ]],
+      amount: ['', [
+        Validators.required,
+        Validators.min(1),
+        Validators.max(100000),
+        Validators.pattern('^[0-9]*$')
+      ]]
+    });
+  }
 
   ngOnInit() {
-    if (!this.tradeForm) {
-      this.tradeForm = this.fb.group({
-        symbol: ['', [
-          Validators.required,
-          Validators.pattern('^[A-Z]{1,5}$')
-        ]],
-        amount: ['', [
-          Validators.required,
-          Validators.min(1),
-          Validators.max(100000),
-          Validators.pattern('^[0-9]*$')
-        ]]
-      });
-    }
-
-    // Subscribe to value changes to update estimated value
     this.tradeForm.valueChanges.subscribe(() => {
       this.updateEstimatedValue();
     });
   }
 
   updateEstimatedValue() {
-    // W rzeczywistej aplikacji tutaj pobieralibyśmy aktualną cenę dla danego symbolu
-    const mockPrice = 150; // Mock price for demonstration
+    const mockPrice = 150;
     const amount = this.tradeForm.get('amount')?.value || 0;
     this.estimatedValue = amount * mockPrice;
   }
@@ -119,10 +119,11 @@ export class BeginnerTradeFormComponent implements OnInit {
           type,
           data: {
             ...this.tradeForm.value,
-            orderType: 'market', // Always market order for beginners
+            orderType: 'market',
             estimatedValue: this.estimatedValue
           }
         });
+        this.tradeForm.reset();
       }
     }
   }

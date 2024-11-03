@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CommissionInfoComponent } from '../comission-info/comission-info.component';
@@ -87,6 +87,7 @@ import { CommissionInfoComponent } from '../comission-info/comission-info.compon
         level="intermediate"
         [orderType]="tradeForm.get('orderType')?.value"
         [estimatedValue]="estimatedValue"
+        [amount]="tradeForm.get('amount')?.value || 0"
       />
 
       <div class="flex space-x-2">
@@ -111,32 +112,28 @@ import { CommissionInfoComponent } from '../comission-info/comission-info.compon
   `
 })
 export class IntermediateTradeFormComponent implements OnInit {
-  @Input() tradeForm!: FormGroup;
-  @Output() submitOrder = new EventEmitter<{ type: 'buy' | 'sell' }>();
+  @Output() submitOrder = new EventEmitter<{ type: 'buy' | 'sell'; data: any }>();
 
-  estimatedValue: number = 0; // Dodaj tę zmienną
+  tradeForm: FormGroup;
+  estimatedValue: number = 0;
 
-  constructor(private fb: FormBuilder) {}
+  constructor(private fb: FormBuilder) {
+    this.tradeForm = this.fb.group({
+      symbol: ['', [Validators.required]],
+      orderType: ['market', [Validators.required]],
+      amount: ['', [Validators.required, Validators.min(1)]],
+      limitPrice: [{ value: '', disabled: true }],
+      stopPrice: [{ value: '', disabled: true }],
+      duration: ['day', [Validators.required]]
+    });
+  }
 
   ngOnInit() {
-    if (!this.tradeForm) {
-      this.tradeForm = this.fb.group({
-        symbol: ['', [Validators.required]],
-        orderType: ['market', [Validators.required]],
-        amount: ['', [Validators.required, Validators.min(1)]],
-        limitPrice: [{ value: '', disabled: true }],
-        stopPrice: [{ value: '', disabled: true }],
-        duration: ['day', [Validators.required]]
-      });
-    }
-
-    // Subskrybuj zmiany w formularzu aby aktualizować estimatedValue
     this.tradeForm.valueChanges.subscribe(() => {
       this.updateEstimatedValue();
     });
   }
 
-  // Dodaj metodę do aktualizacji szacowanej wartości
   updateEstimatedValue() {
     const amount = this.tradeForm.get('amount')?.value || 0;
     const orderType = this.tradeForm.get('orderType')?.value;
@@ -144,7 +141,7 @@ export class IntermediateTradeFormComponent implements OnInit {
 
     switch (orderType) {
       case 'market':
-        price = this.getCurrentMarketPrice(); // Mock ceny rynkowej
+        price = this.getCurrentMarketPrice();
         break;
       case 'limit':
         price = this.tradeForm.get('limitPrice')?.value || this.getCurrentMarketPrice();
@@ -157,9 +154,8 @@ export class IntermediateTradeFormComponent implements OnInit {
     this.estimatedValue = amount * price;
   }
 
-  // Dodaj metodę do pobierania aktualnej ceny rynkowej (mock)
   getCurrentMarketPrice(): number {
-    return 150; // W rzeczywistej aplikacji byłoby to pobierane z API
+    return 150;
   }
 
   onOrderTypeChange() {
@@ -167,13 +163,11 @@ export class IntermediateTradeFormComponent implements OnInit {
     const limitPriceControl = this.tradeForm.get('limitPrice');
     const stopPriceControl = this.tradeForm.get('stopPrice');
 
-    // Reset and disable all price controls first
     limitPriceControl?.disable();
     stopPriceControl?.disable();
     limitPriceControl?.setValue('');
     stopPriceControl?.setValue('');
 
-    // Enable and set validators based on order type
     switch (orderType) {
       case 'limit':
         limitPriceControl?.enable();
@@ -185,7 +179,6 @@ export class IntermediateTradeFormComponent implements OnInit {
         break;
     }
 
-    // Update validators
     limitPriceControl?.updateValueAndValidity();
     stopPriceControl?.updateValueAndValidity();
   }
@@ -200,7 +193,14 @@ export class IntermediateTradeFormComponent implements OnInit {
 
   onSubmit(type: 'buy' | 'sell') {
     if (this.tradeForm.valid) {
-      this.submitOrder.emit({ type });
+      this.submitOrder.emit({
+        type,
+        data: {
+          ...this.tradeForm.value,
+          estimatedValue: this.estimatedValue
+        }
+      });
+      this.tradeForm.reset({ orderType: 'market', duration: 'day' });
     }
   }
 }
