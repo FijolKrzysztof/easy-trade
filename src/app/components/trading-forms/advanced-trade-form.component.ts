@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CommissionInfoComponent } from '../comission-info/comission-info.component';
@@ -120,7 +120,8 @@ import { CommissionInfoComponent } from '../comission-info/comission-info.compon
       <app-commission-info
         level="advanced"
         [orderType]="tradeForm.get('orderType')?.value"
-        [estimatedValue]="getEstimatedValue()"
+        [estimatedValue]="estimatedValue"
+        [amount]="tradeForm.get('amount')?.value || 0"
       />
 
       <div class="flex space-x-2">
@@ -145,28 +146,31 @@ import { CommissionInfoComponent } from '../comission-info/comission-info.compon
   `
 })
 export class AdvancedTradeFormComponent implements OnInit {
-  @Input() tradeForm!: FormGroup;
   @Output() submitOrder = new EventEmitter<{ type: 'buy' | 'sell'; data: any }>();
 
+  estimatedValue: number = 0;
+  tradeForm: FormGroup;
+
   constructor(private fb: FormBuilder) {
+    this.tradeForm = this.fb.group({
+      symbol: ['', [Validators.required, Validators.pattern('^[A-Z]{1,5}$')]],
+      amount: ['', [Validators.required, Validators.min(1), Validators.max(100000)]],
+      orderType: ['market'],
+      limitPrice: [{ value: '', disabled: true }],
+      stopPrice: [{ value: '', disabled: true }],
+      trailingAmount: [{ value: '', disabled: true }],
+      trailingType: [{ value: 'fixed', disabled: true }],
+      duration: ['day'],
+      tif: ['regular']
+    });
   }
 
   ngOnInit() {
-    if (!this.tradeForm) {
-      this.tradeForm = this.fb.group({
-        symbol: ['', [Validators.required, Validators.pattern('^[A-Z]{1,5}$')]],
-        amount: ['', [Validators.required, Validators.min(1), Validators.max(100000)]],
-        orderType: ['market'],
-        limitPrice: [{value: '', disabled: true}],
-        stopPrice: [{value: '', disabled: true}],
-        trailingAmount: [{value: '', disabled: true}],
-        trailingType: [{value: 'fixed', disabled: true}],
-        duration: ['day'],
-        tif: ['regular']
-      });
-    }
-
     this.tradeForm.get('orderType')?.valueChanges.subscribe(this.onOrderTypeChange.bind(this));
+
+    this.tradeForm.valueChanges.subscribe(() => {
+      this.updateEstimatedValue();
+    });
   }
 
   onOrderTypeChange() {
@@ -207,8 +211,13 @@ export class AdvancedTradeFormComponent implements OnInit {
         break;
     }
 
-    // Update validity
     Object.values(controls).forEach(control => control?.updateValueAndValidity());
+  }
+
+  updateEstimatedValue() {
+    const amount = this.tradeForm.get('amount')?.value || 0;
+    const mockPrice = 150; // taka sama wartość jak w intermediate
+    this.estimatedValue = amount * mockPrice;
   }
 
   showLimitPrice(): boolean {
@@ -230,10 +239,9 @@ export class AdvancedTradeFormComponent implements OnInit {
     const orderType = this.tradeForm.get('orderType')?.value;
     let price = 0;
 
-    // Użyj odpowiedniej ceny w zależności od typu zlecenia
     switch (orderType) {
       case 'market':
-        price = this.getCurrentMarketPrice(); // W rzeczywistej aplikacji pobieramy cenę rynkową
+        price = this.getCurrentMarketPrice();
         break;
       case 'limit':
         price = this.tradeForm.get('limitPrice')?.value || 0;
@@ -245,7 +253,7 @@ export class AdvancedTradeFormComponent implements OnInit {
         price = this.tradeForm.get('limitPrice')?.value || 0;
         break;
       case 'trailingStop':
-        price = this.getCurrentMarketPrice(); // Bazujemy na aktualnej cenie rynkowej
+        price = this.getCurrentMarketPrice();
         const trailingAmount = this.tradeForm.get('trailingAmount')?.value || 0;
         const trailingType = this.tradeForm.get('trailingType')?.value;
         if (trailingType === 'percentage') {
@@ -260,8 +268,7 @@ export class AdvancedTradeFormComponent implements OnInit {
   }
 
   getCurrentMarketPrice(): number {
-    // W rzeczywistej aplikacji tutaj byłoby połączenie z API do pobierania cen
-    return 150; // Mock price dla demonstracji
+    return 150;
   }
 
   getCommission(): number {
@@ -269,23 +276,18 @@ export class AdvancedTradeFormComponent implements OnInit {
     const orderType = this.tradeForm.get('orderType')?.value;
     const baseCommission = Math.min(Math.max(estimatedValue * 0.001, 1), 50);
 
-    // Dodatkowe opłaty dla bardziej złożonych typów zleceń
     switch (orderType) {
       case 'market':
         return baseCommission;
       case 'limit':
       case 'stop':
-        return baseCommission * 1.1; // +10% za zlecenia z limitem/stopem
+        return baseCommission * 1.1;
       case 'stopLimit':
       case 'trailingStop':
-        return baseCommission * 1.2; // +20% za bardziej złożone zlecenia
+        return baseCommission * 1.2;
       default:
         return baseCommission;
     }
-  }
-
-  getTotal(): number {
-    return this.getEstimatedValue() + this.getCommission();
   }
 
   async onSubmitWithConfirmation(type: 'buy' | 'sell') {
@@ -296,13 +298,18 @@ export class AdvancedTradeFormComponent implements OnInit {
           ...this.tradeForm.value,
           estimatedValue: this.getEstimatedValue(),
           commission: this.getCommission(),
-          total: this.getTotal()
+          total: this.getEstimatedValue() + this.getCommission()
         };
 
-        this.submitOrder.emit({type, data: orderData});
+        this.submitOrder.emit({ type, data: orderData });
+        this.tradeForm.reset({
+          orderType: 'market',
+          duration: 'day',
+          tif: 'regular',
+          trailingType: 'fixed'
+        });
       }
     } else {
-      // Możemy dodać odpowiedni komunikat o błędzie
       alert('Invalid price configuration for this order type');
     }
   }
@@ -311,14 +318,15 @@ export class AdvancedTradeFormComponent implements OnInit {
     const orderType = this.tradeForm.get('orderType')?.value;
     const symbol = this.tradeForm.get('symbol')?.value;
     const amount = this.tradeForm.get('amount')?.value;
+    const estimatedValue = this.getEstimatedValue();
+    const commission = this.getCommission();
 
     let message = `Are you sure you want to ${type} ${amount} shares of ${symbol}?\n\n`;
     message += `Order Type: ${orderType}\n`;
-    message += `Estimated Value: $${this.getEstimatedValue().toFixed(2)}\n`;
-    message += `Commission: $${this.getCommission().toFixed(2)}\n`;
-    message += `Total: $${this.getTotal().toFixed(2)}\n\n`;
+    message += `Estimated Value: $${estimatedValue.toFixed(2)}\n`;
+    message += `Commission: $${commission.toFixed(2)}\n`;
+    message += `Total: $${(estimatedValue + commission).toFixed(2)}\n\n`;
 
-    // Dodaj specyficzne ostrzeżenia dla różnych typów zleceń
     switch (orderType) {
       case 'market':
         message += 'Warning: Market orders execute at the best available price, which may differ from the estimated value.';
@@ -338,7 +346,6 @@ export class AdvancedTradeFormComponent implements OnInit {
     return window.confirm(message);
   }
 
-  // Dodatkowe metody walidacji
   validatePrices(type: 'buy' | 'sell'): boolean {
     const orderType = this.tradeForm.get('orderType')?.value;
     const stopPrice = this.tradeForm.get('stopPrice')?.value;
@@ -347,15 +354,9 @@ export class AdvancedTradeFormComponent implements OnInit {
 
     switch (orderType) {
       case 'stopLimit':
-        // Dla zlecenia kupna stop-limit:
-        // - Cena stop musi być wyższa niż limit, ponieważ chcemy kupić gdy cena wzrośnie powyżej stop,
-        //   ale nie więcej niż limit
         if (type === 'buy' && stopPrice <= limitPrice) {
           return false;
         }
-        // Dla zlecenia sprzedaży stop-limit:
-        // - Cena stop musi być niższa niż limit, ponieważ chcemy sprzedać gdy cena spadnie poniżej stop,
-        //   ale nie mniej niż limit
         if (type === 'sell' && stopPrice >= limitPrice) {
           return false;
         }
@@ -365,11 +366,9 @@ export class AdvancedTradeFormComponent implements OnInit {
         const trailingAmount = this.tradeForm.get('trailingAmount')?.value;
         const trailingType = this.tradeForm.get('trailingType')?.value;
 
-        // Dla trailing stop w procentach, wartość musi być między 0% a 100%
         if (trailingType === 'percentage' && (trailingAmount <= 0 || trailingAmount >= 100)) {
           return false;
         }
-        // Dla trailing stop w kwocie, wartość musi być dodatnia i mniejsza niż aktualna cena
         if (trailingType === 'fixed' && (trailingAmount <= 0 || trailingAmount >= currentPrice)) {
           return false;
         }
