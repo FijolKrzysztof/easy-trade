@@ -6,7 +6,6 @@ import { RouterOutlet } from '@angular/router';
   standalone: true,
   imports: [RouterOutlet],
   template: `
-<!--    <app-navbar />-->
     <router-outlet />
   `
 })
