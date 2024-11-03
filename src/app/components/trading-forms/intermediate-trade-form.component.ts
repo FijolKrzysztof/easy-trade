@@ -1,11 +1,12 @@
 import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { CommissionInfoComponent } from '../comission-info/comission-info.component';
 
 @Component({
   selector: 'app-intermediate-trade-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, CommissionInfoComponent],
   template: `
     <form [formGroup]="tradeForm" class="space-y-3">
       <div>
@@ -80,6 +81,14 @@ import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angula
         </select>
       </div>
 
+      <div class="mb-4"></div>
+
+      <app-commission-info
+        level="intermediate"
+        [orderType]="tradeForm.get('orderType')?.value"
+        [estimatedValue]="estimatedValue"
+      />
+
       <div class="flex space-x-2">
         <button
           type="button"
@@ -105,10 +114,11 @@ export class IntermediateTradeFormComponent implements OnInit {
   @Input() tradeForm!: FormGroup;
   @Output() submitOrder = new EventEmitter<{ type: 'buy' | 'sell' }>();
 
+  estimatedValue: number = 0; // Dodaj tę zmienną
+
   constructor(private fb: FormBuilder) {}
 
   ngOnInit() {
-    // If form is not provided from parent, create it
     if (!this.tradeForm) {
       this.tradeForm = this.fb.group({
         symbol: ['', [Validators.required]],
@@ -120,8 +130,36 @@ export class IntermediateTradeFormComponent implements OnInit {
       });
     }
 
-    // Subscribe to orderType changes to handle form controls
-    this.tradeForm.get('orderType')?.valueChanges.subscribe(this.onOrderTypeChange.bind(this));
+    // Subskrybuj zmiany w formularzu aby aktualizować estimatedValue
+    this.tradeForm.valueChanges.subscribe(() => {
+      this.updateEstimatedValue();
+    });
+  }
+
+  // Dodaj metodę do aktualizacji szacowanej wartości
+  updateEstimatedValue() {
+    const amount = this.tradeForm.get('amount')?.value || 0;
+    const orderType = this.tradeForm.get('orderType')?.value;
+    let price = 0;
+
+    switch (orderType) {
+      case 'market':
+        price = this.getCurrentMarketPrice(); // Mock ceny rynkowej
+        break;
+      case 'limit':
+        price = this.tradeForm.get('limitPrice')?.value || this.getCurrentMarketPrice();
+        break;
+      case 'stop':
+        price = this.tradeForm.get('stopPrice')?.value || this.getCurrentMarketPrice();
+        break;
+    }
+
+    this.estimatedValue = amount * price;
+  }
+
+  // Dodaj metodę do pobierania aktualnej ceny rynkowej (mock)
+  getCurrentMarketPrice(): number {
+    return 150; // W rzeczywistej aplikacji byłoby to pobierane z API
   }
 
   onOrderTypeChange() {
