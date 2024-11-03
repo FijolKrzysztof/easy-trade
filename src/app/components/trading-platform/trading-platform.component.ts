@@ -8,6 +8,7 @@ import { ChartPanelComponent } from '../chart-panel/chart-panel.component';
 import { TradingPanelComponent } from '../trading-panel/trading-panel.component';
 import { LearningCardsComponent } from '../learning-cards/learning-cards.component';
 import { NavigationItem, PortfolioItem, TimeframeOption, TradeOrder } from '../../models/types';
+import { DifficultySelectorComponent } from '../difficulty-selector/difficulty-selector.component';
 
 @Component({
   selector: 'app-trading-platform',
@@ -19,7 +20,8 @@ import { NavigationItem, PortfolioItem, TimeframeOption, TradeOrder } from '../.
     NavigationMenuComponent,
     ChartPanelComponent,
     TradingPanelComponent,
-    LearningCardsComponent
+    LearningCardsComponent,
+    DifficultySelectorComponent
   ],
   template: `
     <div class="min-h-screen bg-slate-50 p-4">
@@ -41,6 +43,10 @@ import { NavigationItem, PortfolioItem, TimeframeOption, TradeOrder } from '../.
         (tabChange)="setSelectedTab($event)"
       />
 
+      <app-difficulty-selector
+        (levelChange)="onDifficultyChange($event)"
+      ></app-difficulty-selector>
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="lg:col-span-2">
           <app-chart-panel
@@ -54,6 +60,7 @@ import { NavigationItem, PortfolioItem, TimeframeOption, TradeOrder } from '../.
 
         <app-trading-panel
           [portfolioItems]="portfolioItems()"
+          [difficultyLevel]="selectedDifficulty"
           (orderSubmit)="executeOrder($event)"
         />
       </div>
@@ -71,6 +78,7 @@ export class TradingPlatformComponent {
   showNotification = signal(true);
   selectedTab = signal('dashboard');
   selectedTimeframe = signal<TimeframeOption>('1D');
+  selectedDifficulty: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
 
   navigationItems = signal<NavigationItem[]>([
     {
@@ -169,6 +177,10 @@ export class TradingPlatformComponent {
       y: { beginAtZero: false }
     }
   };
+
+  onDifficultyChange(level: string) {
+    this.selectedDifficulty = level as 'beginner' | 'intermediate' | 'advanced';
+  }
 
   setSelectedTab(tab: string): void {
     this.selectedTab.set(tab);
