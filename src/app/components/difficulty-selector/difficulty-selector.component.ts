@@ -1,5 +1,6 @@
 import { Component, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { PrimeIcons } from 'primeng/api';
 
 interface DifficultyLevel {
   name: string;
@@ -21,48 +22,59 @@ interface DifficultyLevels {
   imports: [CommonModule],
   template: `
     <div class="bg-white p-4 rounded-lg mb-4 shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
         <h2 class="text-lg font-semibold">Interface Level</h2>
-        <div class="flex items-center space-x-4">
+        <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:space-x-4">
           @for (level of getDifficultyLevels(); track level[0]) {
             <button
               (click)="setDifficultyLevel(level[0])"
               [class]="getLevelButtonClass(level[0])"
             >
               <i [class]="level[1].icon"></i>
-              <span>{{ level[1].name }}</span>
+              <span class="ml-2">{{ level[1].name }}</span>
             </button>
           }
         </div>
       </div>
 
       <div [class]="'p-4 rounded-lg ' + difficultyLevels[selectedLevel].bgColor + ' bg-opacity-50'">
-        <div class="flex items-start space-x-4">
-          <div class="flex-1">
+        <div class="flex flex-col sm:flex-row items-start gap-3">
+          <div class="flex-1 min-w-0"> <!-- dodane min-w-0 dla prawidłowego truncate -->
             <h3 class="font-medium mb-1">{{ difficultyLevels[selectedLevel].description }}</h3>
-            <div class="text-sm text-gray-600">
-              Features: {{ difficultyLevels[selectedLevel].features.join(', ') }}
+            <div class="text-sm text-gray-600 overflow-hidden">
+              <span class="inline-block w-full">
+                Features: {{ difficultyLevels[selectedLevel].features.join(', ') }}
+              </span>
             </div>
           </div>
-          <div class="flex items-center space-x-2 text-sm">
-            <i class="fas fa-book"></i>
-            <span>Recommended: {{ difficultyLevels[selectedLevel].recommendedLesson }}</span>
-            <button class="text-blue-500 hover:text-blue-600">Start Learning →</button>
+          <div class="flex-shrink-0 flex flex-col sm:flex-row items-start sm:items-center gap-2 text-sm">
+            <div class="flex items-center gap-2 min-w-0"> <!-- dodane min-w-0 -->
+              <i [class]="PrimeIcons.BOOK + ' flex-shrink-0'"></i>
+              <span>Recommended: {{ difficultyLevels[selectedLevel].recommendedLesson }}</span>
+            </div>
+            <button class="text-blue-500 hover:text-blue-600 flex-shrink-0">Start Learning →</button>
           </div>
         </div>
       </div>
     </div>
-  `
+  `,
+  styles: [`
+    :host {
+      display: block;
+      width: 100%;
+    }
+  `]
 })
 export class DifficultySelectorComponent {
   @Output() levelChange = new EventEmitter<string>();
+  PrimeIcons = PrimeIcons;
 
   selectedLevel: string = 'beginner';
 
   difficultyLevels: DifficultyLevels = {
     beginner: {
       name: "Beginner",
-      icon: "fas fa-shield",
+      icon: PrimeIcons.SHIELD,
       color: "text-green-500",
       bgColor: "bg-green-100",
       description: "Basic buy/sell with market orders",
@@ -71,7 +83,7 @@ export class DifficultySelectorComponent {
     },
     intermediate: {
       name: "Intermediate",
-      icon: "fas fa-gauge",
+      icon: PrimeIcons.COMPASS,
       color: "text-blue-500",
       bgColor: "bg-blue-100",
       description: "Limit orders and basic analysis",
@@ -80,7 +92,7 @@ export class DifficultySelectorComponent {
     },
     advanced: {
       name: "Advanced",
-      icon: "fas fa-bolt",
+      icon: PrimeIcons.BOLT,
       color: "text-purple-500",
       bgColor: "bg-purple-100",
       description: "Full trading capabilities",
@@ -99,7 +111,7 @@ export class DifficultySelectorComponent {
   }
 
   getLevelButtonClass(level: string): string {
-    const baseClasses = 'flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors';
+    const baseClasses = 'flex items-center justify-center px-4 py-2 rounded-lg transition-colors flex-1 sm:flex-initial whitespace-nowrap';
     if (level === this.selectedLevel) {
       return `${baseClasses} ${this.difficultyLevels[level].bgColor} ${this.difficultyLevels[level].color}`;
     }
