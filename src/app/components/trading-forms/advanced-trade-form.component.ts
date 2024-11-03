@@ -1,11 +1,12 @@
 import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { CommissionInfoComponent } from '../comission-info/comission-info.component';
 
 @Component({
   selector: 'app-advanced-trade-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, CommissionInfoComponent],
   template: `
     <form [formGroup]="tradeForm" class="space-y-3">
       <div class="grid grid-cols-2 gap-2">
@@ -114,20 +115,13 @@ import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angula
         </select>
       </div>
 
-      <div class="p-2 bg-gray-50 rounded text-sm">
-        <div class="flex justify-between mb-1">
-          <span>Estimated Value:</span>
-          <span>{{ getEstimatedValue() | currency }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span>Commission:</span>
-          <span>{{ getCommission() | currency }}</span>
-        </div>
-        <div class="flex justify-between font-medium">
-          <span>Total:</span>
-          <span>{{ getTotal() | currency }}</span>
-        </div>
-      </div>
+      <div class="mb-4"></div>
+
+      <app-commission-info
+        level="advanced"
+        [orderType]="tradeForm.get('orderType')?.value"
+        [estimatedValue]="getEstimatedValue()"
+      />
 
       <div class="flex space-x-2">
         <button

@@ -1,11 +1,12 @@
 import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { CommissionInfoComponent } from '../comission-info/comission-info.component';
 
 @Component({
   selector: 'app-beginner-trade-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, CommissionInfoComponent],
   template: `
     <form [formGroup]="tradeForm" class="space-y-4">
       <div>
@@ -48,14 +49,9 @@ import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angula
         }
       </div>
 
-      @if (estimatedValue > 0) {
-        <div class="p-2 bg-gray-50 rounded text-sm">
-          <div class="flex justify-between">
-            <span>Estimated Value:</span>
-            <span>{{ estimatedValue | currency }}</span>
-          </div>
-        </div>
-      }
+      <div class="mb-4"></div>
+
+      <app-commission-info level="beginner" [estimatedValue]="estimatedValue" />
 
       <div class="flex space-x-2">
         <button
