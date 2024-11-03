@@ -40,10 +40,10 @@ import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angula
         @if (tradeForm.get('amount')?.errors?.['required'] && tradeForm.get('amount')?.touched) {
           <span class="text-xs text-red-500">Amount is required</span>
         }
-        @if (tradeForm.get('amount')?.errors?.['min']) {
+        @if (tradeForm.get('amount')?.errors?.['min'] && tradeForm.get('amount')?.touched) {
           <span class="text-xs text-red-500">Amount must be at least 1</span>
         }
-        @if (tradeForm.get('amount')?.errors?.['max']) {
+        @if (tradeForm.get('amount')?.errors?.['max'] && tradeForm.get('amount')?.touched) {
           <span class="text-xs text-red-500">Amount cannot exceed 100,000</span>
         }
       </div>
