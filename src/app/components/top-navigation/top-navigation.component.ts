@@ -17,7 +17,7 @@ import { CommonModule } from '@angular/common';
             </span>
           </div>
           <div class="flex flex-col items-end">
-            <span class="text-green-500 font-semibold">{{balance.toLocaleString()}}</span>
+            <span class="text-green-500 font-semibold">{{balance.toLocaleString()}} $</span>
             <span class="text-sm text-gray-500">{{username}}</span>
           </div>
         </div>
