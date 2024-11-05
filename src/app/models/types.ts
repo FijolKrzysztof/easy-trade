@@ -86,6 +86,7 @@ export interface Indicator {
   trend: number;            // kierunek zmian (-1 do 1)
   targetValue: number;      // wartość do której dąży wskaźnik
   changeSpeed: number;      // jak szybko zmienia się wskaźnik (0-1)
+  volatility: number;
 }
 
 // Podstawowe typy dla spółki

@@ -5,40 +5,72 @@ import { Indicator, IndicatorTimeframe, PricePoint, SimulationConfig, Stock } fr
   providedIn: 'root'
 })
 export class SimulationService {
-  // Sygnały
   private readonly simulationConfig = signal<SimulationConfig>({
     speed: 1000,
     isRunning: false,
     currentDate: new Date()
   });
 
-  // Inicjalizacja stocks z początkowymi danymi
+  // Stały zestaw wskaźników rynkowych
+  private readonly marketIndicators = [
+    {
+      name: 'RSI (Relative Strength Index)',
+      baseWeight: 0.15,
+      timeframe: IndicatorTimeframe.SHORT,
+      volatility: 0.2,
+      description: 'Momentum indicator measuring speed and magnitude of recent price changes'
+    },
+    {
+      name: 'Volume Pressure',
+      baseWeight: 0.15,
+      timeframe: IndicatorTimeframe.SHORT,
+      volatility: 0.25,
+      description: 'Indicates buying/selling pressure based on volume analysis'
+    },
+    {
+      name: 'MACD Signal',
+      baseWeight: 0.15,
+      timeframe: IndicatorTimeframe.MEDIUM,
+      volatility: 0.15,
+      description: 'Moving Average Convergence/Divergence trend indicator'
+    },
+    {
+      name: 'Market Sentiment',
+      baseWeight: 0.1,
+      timeframe: IndicatorTimeframe.SHORT,
+      volatility: 0.3,
+      description: 'Overall market mood based on various sentiment indicators'
+    },
+    {
+      name: 'Sector Trend',
+      baseWeight: 0.15,
+      timeframe: IndicatorTimeframe.MEDIUM,
+      volatility: 0.1,
+      description: 'Performance relative to sector average'
+    },
+    {
+      name: 'Institutional Money Flow',
+      baseWeight: 0.15,
+      timeframe: IndicatorTimeframe.MEDIUM,
+      volatility: 0.12,
+      description: 'Tracks institutional investor buying/selling patterns'
+    },
+    {
+      name: 'Economic Context',
+      baseWeight: 0.15,
+      timeframe: IndicatorTimeframe.LONG,
+      volatility: 0.08,
+      description: 'Impact of broader economic conditions'
+    }
+  ];
+
   private readonly stocks = signal<Stock[]>([
     {
       id: '1',
       name: 'Tech Corp',
       ticker: 'TCH',
       currentPrice: 100,
-      indicators: [
-        {
-          name: 'Market Sentiment',
-          value: 50,
-          weight: 0.6,
-          timeframe: IndicatorTimeframe.SHORT,
-          trend: 0.1,
-          targetValue: 65,
-          changeSpeed: 0.1
-        },
-        {
-          name: 'Growth Potential',
-          value: 75,
-          weight: 0.4,
-          timeframe: IndicatorTimeframe.LONG,
-          trend: 0.05,
-          targetValue: 80,
-          changeSpeed: 0.05
-        }
-      ],
+      indicators: [],
       priceHistory: []
     },
     {
@@ -46,26 +78,7 @@ export class SimulationService {
       name: 'Stable Industries',
       ticker: 'STB',
       currentPrice: 50,
-      indicators: [
-        {
-          name: 'Market Sentiment',
-          value: 45,
-          weight: 0.4,
-          timeframe: IndicatorTimeframe.SHORT,
-          trend: -0.1,
-          targetValue: 40,
-          changeSpeed: 0.1
-        },
-        {
-          name: 'Growth Potential',
-          value: 60,
-          weight: 0.6,
-          timeframe: IndicatorTimeframe.LONG,
-          trend: 0.02,
-          targetValue: 65,
-          changeSpeed: 0.03
-        }
-      ],
+      indicators: [],
       priceHistory: []
     }
   ]);
@@ -73,18 +86,48 @@ export class SimulationService {
   private simulationInterval?: number;
 
   constructor() {
+    this.stocks.update(stocks =>
+      stocks.map(stock => ({
+        ...stock,
+        indicators: this.initializeIndicators()
+      }))
+    );
     this.initializePriceHistory();
-    // this.startSimulation();
+  }
+
+  private initializeIndicators(): Indicator[] {
+    return this.marketIndicators.map(indicator => ({
+      name: indicator.name,
+      value: 45 + Math.random() * 10, // Startowa wartość między 45 a 55 dla większej stabilności
+      weight: indicator.baseWeight,
+      timeframe: indicator.timeframe,
+      trend: (Math.random() - 0.5) * 0.1,
+      targetValue: 40 + Math.random() * 20,
+      changeSpeed: 0.05 + Math.random() * 0.05,
+      volatility: indicator.volatility
+    }));
   }
 
   private initializePriceHistory() {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    this.simulationConfig.update(config => ({
+      ...config,
+      currentDate: new Date(now.getTime())
+    }));
+
     this.stocks.update(stocks =>
       stocks.map(stock => ({
         ...stock,
         priceHistory: this.generateInitialHistory(stock.currentPrice, thirtyDaysAgo, now)
+      }))
+    );
+
+    this.stocks.update(stocks =>
+      stocks.map(stock => ({
+        ...stock,
+        currentPrice: stock.priceHistory[stock.priceHistory.length - 1]?.price || stock.currentPrice
       }))
     );
   }
@@ -93,14 +136,27 @@ export class SimulationService {
     const history: PricePoint[] = [];
     let currentDate = new Date(startDate);
     let currentPrice = startPrice;
+    let momentum = 0;
+    let volatilityFactor = 1;
 
     while (currentDate <= endDate) {
       if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
         const hours = currentDate.getHours();
-        // Generuj dane tylko podczas godzin giełdowych (9:30 - 16:00)
         if ((hours === 9 && currentDate.getMinutes() >= 30) || (hours > 9 && hours < 16)) {
-          const change = currentPrice * (Math.random() - 0.5) * 0.02;
-          currentPrice += change;
+          momentum = momentum * 0.7 + (Math.random() - 0.5) * 0.002;
+
+          if (Math.random() < 0.05) {
+            volatilityFactor = 0.8 + Math.random() * 0.4; // Zakres 0.8-1.2
+          }
+
+          const baseChange = (Math.random() - 0.5) * 0.003 * volatilityFactor;
+          const change = (baseChange + momentum) * currentPrice;
+
+          const spike = Math.random() < 0.05 ?
+            (Math.random() - 0.5) * 0.004 * currentPrice * volatilityFactor : 0;
+
+          currentPrice += change + spike;
+          currentPrice = Math.max(currentPrice, currentPrice * 0.998);
 
           history.push({
             timestamp: currentDate.getTime(),
@@ -109,40 +165,87 @@ export class SimulationService {
           });
         }
       }
-
-      // 5-minutowe interwały
       currentDate = new Date(currentDate.getTime() + 5 * 60 * 1000);
     }
 
     return history;
   }
 
+  private calculatePriceChange(indicators: Indicator[]): number {
+    let totalChange = 0;
+    let momentum = 0;
+
+    indicators.forEach(indicator => {
+      const normalizedValue = (indicator.value - 50) / 50;
+      let impact = normalizedValue * indicator.weight;
+
+      const volatilityImpact = (Math.random() - 0.5) * indicator.volatility * 0.3;
+
+      switch (indicator.timeframe) {
+        case IndicatorTimeframe.SHORT:
+          impact *= 0.006;
+          break;
+        case IndicatorTimeframe.MEDIUM:
+          impact *= 0.003;
+          break;
+        case IndicatorTimeframe.LONG:
+          impact *= 0.0015;
+          break;
+      }
+
+      impact += volatilityImpact;
+      totalChange += impact;
+    });
+
+    momentum = momentum * 0.6 + totalChange * 0.2;
+    const spike = Math.random() < 0.05 ? (Math.random() - 0.5) * 0.001 : 0;
+
+    return totalChange + momentum + spike;
+  }
+
+  private updateIndicators(indicators: Indicator[]): Indicator[] {
+    return indicators.map(indicator => {
+      const difference = indicator.targetValue - indicator.value;
+      const change = difference * indicator.changeSpeed * 0.3;
+      const randomNoise = (Math.random() - 0.5) * indicator.volatility * 0.2;
+
+      const isNearTarget = Math.abs(difference) < 2;
+      const newTargetValue = isNearTarget
+        ? this.generateNewTarget(indicator.value, indicator.volatility)
+        : indicator.targetValue;
+
+      return {
+        ...indicator,
+        value: Number((indicator.value + change + randomNoise).toFixed(2)),
+        targetValue: newTargetValue
+      };
+    });
+  }
+
+  private generateNewTarget(currentValue: number, volatility: number): number {
+    const maxChange = 15 + (volatility * 50);
+    const change = (Math.random() - 0.5) * maxChange;
+    return Math.max(0, Math.min(100, currentValue + change));
+  }
+
   private simulateDay() {
     const stocks = this.stocks();
     const currentDate = this.simulationConfig().currentDate;
 
-    // Symuluj tylko podczas godzin giełdowych
     const hours = currentDate.getHours();
     const minutes = currentDate.getMinutes();
     const isMarketOpen = (hours === 9 && minutes >= 30) || (hours > 9 && hours < 16);
 
     if (!isMarketOpen || currentDate.getDay() === 0 || currentDate.getDay() === 6) {
-      // Poza godzinami giełdowymi lub w weekend, przejdź do następnego momentu
       this.moveToNextMarketOpen();
       return;
     }
 
     const updatedStocks = stocks.map(stock => {
-      // Aktualizuj wskaźniki
       const updatedIndicators = this.updateIndicators(stock.indicators);
-
-      // Oblicz zmianę ceny na podstawie wskaźników
       const priceChange = this.calculatePriceChange(updatedIndicators);
-
-      // Oblicz nową cenę
       const newPrice = Number((stock.currentPrice * (1 + priceChange)).toFixed(2));
 
-      // Utwórz nowy punkt cenowy
       const newPricePoint: PricePoint = {
         timestamp: currentDate.getTime(),
         price: newPrice,
@@ -157,7 +260,6 @@ export class SimulationService {
       };
     });
 
-    // Aktualizuj czas o 5 minut
     this.simulationConfig.update(config => ({
       ...config,
       currentDate: new Date(currentDate.getTime() + 5 * 60 * 1000)
@@ -170,13 +272,11 @@ export class SimulationService {
     const currentDate = this.simulationConfig().currentDate;
     let nextDate = new Date(currentDate);
 
-    // Najpierw przesuń do następnego dnia 9:30 jeśli jesteśmy po 16:00
     if (currentDate.getHours() >= 16) {
       nextDate.setDate(nextDate.getDate() + 1);
       nextDate.setHours(9, 30, 0, 0);
     }
 
-    // Jeśli to weekend, przesuń do poniedziałku
     while (nextDate.getDay() === 0 || nextDate.getDay() === 6) {
       nextDate.setDate(nextDate.getDate() + 1);
     }
@@ -187,62 +287,6 @@ export class SimulationService {
     }));
   }
 
-  private updateIndicators(indicators: Indicator[]): Indicator[] {
-    return indicators.map(indicator => {
-      // Oblicz odległość do wartości docelowej
-      const difference = indicator.targetValue - indicator.value;
-      const change = difference * indicator.changeSpeed;
-
-      // Jeśli jesteśmy blisko celu, wygeneruj nowy
-      const isNearTarget = Math.abs(difference) < 1;
-      const newTargetValue = isNearTarget
-        ? this.generateNewTarget(indicator.value)
-        : indicator.targetValue;
-
-      return {
-        ...indicator,
-        value: Number((indicator.value + change).toFixed(2)),
-        targetValue: newTargetValue
-      };
-    });
-  }
-
-  private generateNewTarget(currentValue: number): number {
-    const change = (Math.random() - 0.5) * 60; // ±30 punktów
-    return Math.max(0, Math.min(100, currentValue + change));
-  }
-
-  private calculatePriceChange(indicators: Indicator[]): number {
-    let totalChange = 0;
-
-    indicators.forEach(indicator => {
-      // Normalizuj wartość wskaźnika do zakresu -1 do 1
-      const normalizedValue = (indicator.value - 50) / 50;
-      let impact = normalizedValue * indicator.weight;
-
-      // Dostosuj wpływ based on timeframe
-      switch (indicator.timeframe) {
-        case IndicatorTimeframe.SHORT:
-          impact *= 0.03; // 3% max wpływu
-          break;
-        case IndicatorTimeframe.MEDIUM:
-          impact *= 0.015; // 1.5% max wpływu
-          break;
-        case IndicatorTimeframe.LONG:
-          impact *= 0.007; // 0.7% max wpływu
-          break;
-      }
-
-      totalChange += impact;
-    });
-
-    // Dodaj mały losowy szum
-    totalChange += (Math.random() - 0.5) * 0.002;
-
-    return totalChange;
-  }
-
-  // Metody publiczne
   startSimulation() {
     if (!this.simulationInterval) {
       this.simulationConfig.update(config => ({ ...config, isRunning: true }));
