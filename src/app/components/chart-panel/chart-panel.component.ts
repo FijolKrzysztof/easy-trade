@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChartModule } from 'primeng/chart';
 import { ChartService } from '../../services/chart.service';
@@ -14,6 +14,20 @@ import { TimeframeOption } from '../../models/types';
         <div class="flex flex-row items-center justify-between">
           <h2 class="text-lg font-semibold">S&P 500 - Daily Chart</h2>
           <div class="flex space-x-2">
+            <div class="flex space-x-2 mr-4">
+              <button
+                (click)="toggleLiveUpdates()"
+                [class]="getLiveUpdateButtonClass()"
+              >
+                {{ isLiveEnabled ? 'Pause' : 'Start' }} Live Updates
+              </button>
+              <button
+                (click)="refreshData()"
+                class="px-3 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200"
+              >
+                Refresh
+              </button>
+            </div>
             @for (period of chartService.timeframes; track period) {
               <button
                 (click)="onTimeframeChange(period)"
@@ -35,8 +49,9 @@ import { TimeframeOption } from '../../models/types';
     </div>
   `
 })
-export class ChartPanelComponent implements OnInit {
+export class ChartPanelComponent implements OnInit, OnDestroy {
   readonly chartService = inject(ChartService);
+  isLiveEnabled = false;
 
   readonly options = {
     maintainAspectRatio: true,
@@ -116,7 +131,21 @@ export class ChartPanelComponent implements OnInit {
   };
 
   ngOnInit() {
-    this.chartService.startLiveUpdates();
+    // Nie startujemy live updates automatycznie
+  }
+
+  ngOnDestroy() {
+    // Zatrzymujemy symulację przy zniszczeniu komponentu
+    this.chartService.configureSimulation({ enabled: false });
+  }
+
+  toggleLiveUpdates() {
+    this.isLiveEnabled = !this.isLiveEnabled;
+    this.chartService.configureSimulation({ enabled: this.isLiveEnabled });
+  }
+
+  refreshData() {
+    this.chartService.refreshData();
   }
 
   onTimeframeChange(timeframe: TimeframeOption): void {
@@ -127,6 +156,14 @@ export class ChartPanelComponent implements OnInit {
     return `px-3 py-1 text-sm rounded ${
       this.chartService.getSelectedTimeframe()() === timeframe
         ? 'bg-blue-500 text-white'
+        : 'bg-gray-100 hover:bg-gray-200'
+    }`;
+  }
+
+  getLiveUpdateButtonClass(): string {
+    return `px-3 py-1 text-sm rounded ${
+      this.isLiveEnabled
+        ? 'bg-green-500 text-white'
         : 'bg-gray-100 hover:bg-gray-200'
     }`;
   }

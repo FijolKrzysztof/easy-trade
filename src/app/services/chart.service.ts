@@ -1,16 +1,76 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { PricePoint, TimeframeOption } from '../models/types';
+
+interface TimeframeData {
+  minutely: PricePoint[];
+  hourly: PricePoint[];
+  daily: PricePoint[];
+}
+
+interface ChartDataset {
+  labels: string[];
+  datasets: Array<{
+    label: string;
+    data: number[];
+    fill: boolean;
+    borderColor: string;
+    backgroundColor: string;
+    tension: number;
+  }>;
+}
+
+interface OHLCData extends PricePoint {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+interface SimulationConfig {
+  interval: number;  // in milliseconds
+  enabled: boolean;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChartService {
-  private readonly historicalData: PricePoint[] = this.generateHistoricalData();
-  private readonly selectedTimeframe = signal<TimeframeOption>('1D');
-  private readonly chartData = signal(this.prepareChartData('1D'));
+  // Private properties
+  private readonly historicalData: PricePoint[] = [];
+  private simulationInterval?: number;
 
+  // Signals
+  private readonly selectedTimeframe = signal<TimeframeOption>('1D');
+  private readonly timeframeData = signal<TimeframeData>({ minutely: [], hourly: [], daily: [] });
+  private readonly simulationConfig = signal<SimulationConfig>({
+    interval: 100,
+    enabled: false
+  });
+
+  // Public properties
   readonly timeframes: TimeframeOption[] = ['1D', '1W', '1M'];
 
+  // Computed signals
+  private readonly chartData = computed(() => {
+    const data = this.timeframeData();
+    const now = new Date();
+
+    switch (this.selectedTimeframe()) {
+      case '1D':
+        return this.prepareDayChartData(data.minutely, now);
+      case '1W':
+        return this.prepareWeekChartData(data.hourly, now);
+      case '1M':
+        return this.prepareMonthChartData(data.daily, now);
+    }
+  });
+
+  constructor() {
+    this.historicalData = this.generateHistoricalData();
+    this.timeframeData.set(this.aggregateAllTimeframes());
+  }
+
+  // Public methods
   getSelectedTimeframe() {
     return this.selectedTimeframe;
   }
@@ -21,53 +81,61 @@ export class ChartService {
 
   updateTimeframe(timeframe: TimeframeOption): void {
     this.selectedTimeframe.set(timeframe);
-    this.chartData.set(this.prepareChartData(timeframe));
   }
 
+  configureSimulation(config: Partial<SimulationConfig>) {
+    const currentConfig = this.simulationConfig();
+    this.simulationConfig.set({ ...currentConfig, ...config });
+
+    if (this.simulationInterval) {
+      clearInterval(this.simulationInterval);
+      this.simulationInterval = undefined;
+    }
+
+    if (config.enabled) {
+      this.startLiveUpdates();
+    }
+  }
+
+  refreshData() {
+    this.timeframeData.set(this.aggregateAllTimeframes());
+  }
+
+  // Private methods for data generation and processing
   private generateHistoricalData(): PricePoint[] {
     const data: PricePoint[] = [];
     const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 dni wstecz
+    const startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days back
     let currentDate = startDate;
-    let currentPrice = 4580; // Startowa cena
+    let currentPrice = 4580;
 
     while (currentDate <= endDate) {
-      // Pomijamy weekendy
-      if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
-        // Tylko godziny handlowe (9:30 - 16:00)
+      if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) { // Skip weekends
         const hours = currentDate.getHours();
         const minutes = currentDate.getMinutes();
-        if (
-          (hours === 9 && minutes >= 30) ||
-          (hours > 9 && hours < 16) ||
-          (hours === 16 && minutes === 0)
-        ) {
-          // Symulacja zmian ceny z większą zmiennością na otwarciu i zamknięciu
-          const timeOfDay = hours + minutes / 60;
-          let volatility = 0.0005; // Bazowa zmienność
 
-          // Zwiększona zmienność na otwarciu i zamknięciu
+        // Only generate data during market hours (9:30 AM - 4:00 PM)
+        if ((hours === 9 && minutes >= 30) || (hours > 9 && hours < 16) || (hours === 16 && minutes === 0)) {
+          const timeOfDay = hours + minutes / 60;
+          let volatility = 0.0005;
+
+          // Increased volatility at market open and close
           if (timeOfDay < 10.5 || timeOfDay > 15) {
             volatility *= 2;
           }
 
-          // Symulacja trendu dziennego
           const dailyTrend = Math.sin(currentDate.getDate() * 0.5) * 0.0002;
-
-          // Obliczanie nowej ceny
           const change = currentPrice * (
-            volatility * (Math.random() - 0.5) + // Losowa zmiana
-            dailyTrend + // Trend dzienny
-            0.00005 // Delikatny trend wzrostowy
+            volatility * (Math.random() - 0.5) +
+            dailyTrend +
+            0.00005
           );
 
           currentPrice += change;
 
-          // Symulacja wolumenu
           const baseVolume = 1000000;
           let volume = baseVolume + Math.random() * baseVolume;
 
-          // Większy wolumen na otwarciu i zamknięciu
           if (timeOfDay < 10.5 || timeOfDay > 15) {
             volume *= 2;
           }
@@ -79,65 +147,111 @@ export class ChartService {
           });
         }
       }
-      // Przesuwamy o 5 minut
-      currentDate = new Date(currentDate.getTime() + 5 * 60 * 1000);
+      currentDate = new Date(currentDate.getTime() + 5 * 60 * 1000); // 5-minute intervals
     }
     return data;
   }
 
-  private prepareChartData(timeframe: TimeframeOption) {
-    const now = new Date();
-    let filteredData: PricePoint[] = [];
-    let labels: string[] = [];
+  private aggregateAllTimeframes(): TimeframeData {
+    const minutely = [...this.historicalData].sort((a, b) => a.timestamp - b.timestamp);
+    const hourly = this.aggregateToHourly(minutely);
+    const daily = this.aggregateToDaily(hourly);
 
-    switch (timeframe) {
-      case '1D': {
-        const startOfDay = new Date(now);
-        startOfDay.setHours(9, 30, 0, 0);
+    return { minutely, hourly, daily };
+  }
 
-        filteredData = this.historicalData.filter(point =>
-          point.timestamp >= startOfDay.getTime()
-        );
+  private aggregateToHourly(minutelyData: PricePoint[]): OHLCData[] {
+    const hourlyMap = new Map<string, PricePoint[]>();
 
-        labels = filteredData.map(point => {
-          const date = new Date(point.timestamp);
-          return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-        });
-        break;
+    minutelyData.forEach(point => {
+      const date = new Date(point.timestamp);
+      const hourKey = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        date.getHours()
+      ).getTime().toString();
+
+      if (!hourlyMap.has(hourKey)) {
+        hourlyMap.set(hourKey, []);
       }
-      case '1W': {
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - 7);
+      hourlyMap.get(hourKey)!.push(point);
+    });
 
-        // Agregujemy dane do dziennych punktów
-        filteredData = this.aggregateDataByDay(
-          this.historicalData.filter(point => point.timestamp >= startOfWeek.getTime())
-        );
+    return Array.from(hourlyMap.entries())
+      .map(([timestamp, points]) => {
+        const sortedPoints = points.sort((a, b) => a.timestamp - b.timestamp);
 
-        labels = filteredData.map(point => {
-          const date = new Date(point.timestamp);
-          return date.toLocaleDateString('en-US', { weekday: 'short' });
-        });
-        break;
+        return {
+          timestamp: Number(timestamp),
+          price: sortedPoints[sortedPoints.length - 1].price,
+          volume: sortedPoints.reduce((sum, point) => sum + point.volume, 0),
+          open: sortedPoints[0].price,
+          high: Math.max(...sortedPoints.map(p => p.price)),
+          low: Math.min(...sortedPoints.map(p => p.price)),
+          close: sortedPoints[sortedPoints.length - 1].price
+        };
+      })
+      .sort((a, b) => a.timestamp - b.timestamp);
+  }
+
+  private aggregateToDaily(hourlyData: OHLCData[]): OHLCData[] {
+    const dailyMap = new Map<string, OHLCData[]>();
+
+    hourlyData.forEach(point => {
+      const date = new Date(point.timestamp);
+      const dayKey = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      ).getTime().toString();
+
+      if (!dailyMap.has(dayKey)) {
+        dailyMap.set(dayKey, []);
       }
-      case '1M': {
-        const startOfMonth = new Date(now);
-        startOfMonth.setMonth(now.getMonth() - 1);
+      dailyMap.get(dayKey)!.push(point);
+    });
 
-        filteredData = this.aggregateDataByDay(
-          this.historicalData.filter(point => point.timestamp >= startOfMonth.getTime())
-        );
+    return Array.from(dailyMap.entries())
+      .map(([timestamp, points]) => {
+        const sortedPoints = points.sort((a, b) => a.timestamp - b.timestamp);
 
-        labels = filteredData.map(point => {
-          const date = new Date(point.timestamp);
-          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        });
-        break;
-      }
+        return {
+          timestamp: Number(timestamp),
+          price: sortedPoints[sortedPoints.length - 1].close,
+          volume: sortedPoints.reduce((sum, point) => sum + point.volume, 0),
+          open: sortedPoints[0].open,
+          high: Math.max(...sortedPoints.map(p => p.high)),
+          low: Math.min(...sortedPoints.map(p => p.low)),
+          close: sortedPoints[sortedPoints.length - 1].close
+        };
+      })
+      .sort((a, b) => a.timestamp - b.timestamp);
+  }
+
+  // Private methods for chart data preparation
+  private prepareDayChartData(minutelyData: PricePoint[], now: Date): ChartDataset {
+    const startOfDay = new Date(now);
+    startOfDay.setHours(9, 30, 0, 0);
+
+    // If it's past market hours, move to the next day
+    if (now.getHours() >= 16) {
+      startOfDay.setDate(startOfDay.getDate() + 1);
     }
 
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setHours(16, 0, 0, 0);
+
+    const filteredData = minutelyData.filter(point =>
+      point.timestamp >= startOfDay.getTime() &&
+      point.timestamp <= endOfDay.getTime()
+    );
+
     return {
-      labels,
+      labels: filteredData.map(point => {
+        const date = new Date(point.timestamp);
+        return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+      }),
       datasets: [{
         label: 'S&P 500',
         data: filteredData.map(point => point.price),
@@ -149,49 +263,73 @@ export class ChartService {
     };
   }
 
-  private aggregateDataByDay(data: PricePoint[]): PricePoint[] {
-    const dailyData = new Map<string, PricePoint[]>();
+  private prepareWeekChartData(hourlyData: PricePoint[], now: Date): ChartDataset {
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - 7);
 
-    // Grupujemy punkty po dniach
-    data.forEach(point => {
-      const date = new Date(point.timestamp);
-      const dateKey = date.toISOString().split('T')[0];
-      if (!dailyData.has(dateKey)) {
-        dailyData.set(dateKey, []);
-      }
-      dailyData.get(dateKey)!.push(point);
-    });
+    const filteredData = hourlyData.filter(point =>
+      point.timestamp >= startOfWeek.getTime()
+    );
 
-    // Agregujemy dane dla każdego dnia
-    return Array.from(dailyData.entries()).map(([dateKey, points]) => {
-      const timestamp = new Date(dateKey).getTime();
-      // OHLC można by też dodać
-      const price = points[points.length - 1].price; // Cena zamknięcia
-      const volume = points.reduce((sum, point) => sum + point.volume, 0);
-
-      return { timestamp, price, volume };
-    });
+    return {
+      labels: filteredData.map(point => {
+        const date = new Date(point.timestamp);
+        return `${date.toLocaleDateString('en-US', { weekday: 'short' })} ${date.getHours()}:00`;
+      }),
+      datasets: [{
+        label: 'S&P 500',
+        data: filteredData.map(point => point.price),
+        fill: true,
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+        tension: 0.4
+      }]
+    };
   }
 
-  // Możemy też dodać live updates
-  startLiveUpdates() {
-    setInterval(() => {
-      if (this.selectedTimeframe() === '1D') {
-        const lastPoint = this.historicalData[this.historicalData.length - 1];
-        const newTimestamp = lastPoint.timestamp + 5 * 60 * 1000;
-        const change = lastPoint.price * 0.0005 * (Math.random() - 0.5);
-        const newPrice = Number((lastPoint.price + change).toFixed(2));
-        const newVolume = Math.round(1000000 + Math.random() * 1000000);
+  private prepareMonthChartData(dailyData: PricePoint[], now: Date): ChartDataset {
+    const startOfMonth = new Date(now);
+    startOfMonth.setMonth(now.getMonth() - 1);
 
-        this.historicalData.push({
-          timestamp: newTimestamp,
-          price: newPrice,
-          volume: newVolume
-        });
+    const filteredData = dailyData.filter(point =>
+      point.timestamp >= startOfMonth.getTime()
+    );
 
-        // Aktualizujemy wykres
-        this.chartData.set(this.prepareChartData('1D'));
-      }
-    }, 5000); // Co 5 sekund dla demonstracji
+    return {
+      labels: filteredData.map(point => {
+        const date = new Date(point.timestamp);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }),
+      datasets: [{
+        label: 'S&P 500',
+        data: filteredData.map(point => point.price),
+        fill: true,
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+        tension: 0.4
+      }]
+    };
+  }
+
+  private startLiveUpdates() {
+    const config = this.simulationConfig();
+    if (!config.enabled) return;
+
+    this.simulationInterval = window.setInterval(() => {
+      const lastPoint = this.historicalData[this.historicalData.length - 1];
+      const newTimestamp = lastPoint.timestamp + 5 * 60 * 1000; // 5-minute intervals
+      const change = lastPoint.price * 0.0005 * (Math.random() - 0.5);
+      const newPrice = Number((lastPoint.price + change).toFixed(2));
+      const newVolume = Math.round(1000000 + Math.random() * 1000000);
+
+      const newPoint = {
+        timestamp: newTimestamp,
+        price: newPrice,
+        volume: newVolume
+      };
+
+      this.historicalData.push(newPoint);
+      this.timeframeData.set(this.aggregateAllTimeframes());
+    }, config.interval);
   }
 }
