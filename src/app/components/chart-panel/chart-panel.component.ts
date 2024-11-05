@@ -1,7 +1,8 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChartModule } from 'primeng/chart';
 import { ChartService } from '../../services/chart.service';
+import { SimulationService } from '../../services/simulation.service';
 import { TimeframeOption } from '../../models/types';
 
 @Component({
@@ -12,22 +13,21 @@ import { TimeframeOption } from '../../models/types';
     <div class="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
       <div class="p-4 border-b border-gray-100">
         <div class="flex flex-row items-center justify-between">
-          <h2 class="text-lg font-semibold">S&P 500 - Daily Chart</h2>
-          <div class="flex space-x-2">
-            <div class="flex space-x-2 mr-4">
-              <button
-                (click)="toggleLiveUpdates()"
-                [class]="getLiveUpdateButtonClass()"
-              >
-                {{ isLiveEnabled ? 'Pause' : 'Start' }} Live Updates
-              </button>
-              <button
-                (click)="refreshData()"
-                class="px-3 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200"
-              >
-                Refresh
-              </button>
+          <div class="flex items-center space-x-4">
+            <h2 class="text-lg font-semibold">Market Data</h2>
+            <div class="flex space-x-2">
+              @for (stock of availableStocks(); track stock.id) {
+                <button
+                  (click)="selectStock(stock.id)"
+                  [class]="getStockButtonClass(stock.id)"
+                >
+                  {{ stock.ticker }}
+                </button>
+              }
             </div>
+          </div>
+
+          <div class="flex space-x-2">
             @for (period of chartService.timeframes; track period) {
               <button
                 (click)="onTimeframeChange(period)"
@@ -38,20 +38,33 @@ import { TimeframeOption } from '../../models/types';
             }
           </div>
         </div>
+
+        <div class="mt-2 text-sm text-gray-500">
+          {{ currentDate() | date:'medium' }}
+        </div>
       </div>
+
       <div class="flex-1 p-4">
         <p-chart
           type="line"
-          [data]="chartService.getChartData()()"
+          [data]="chartService.chartData()"
           [options]="options"
         ></p-chart>
       </div>
     </div>
   `
 })
-export class ChartPanelComponent implements OnInit, OnDestroy {
+export class ChartPanelComponent {
   readonly chartService = inject(ChartService);
-  isLiveEnabled = false;
+  readonly simulationService = inject(SimulationService);
+
+  readonly availableStocks = computed(() => {
+    return this.simulationService.getStocks()();
+  });
+
+  readonly currentDate = computed(() => {
+    return this.simulationService.getSimulationConfig()().currentDate;
+  });
 
   readonly options = {
     maintainAspectRatio: true,
@@ -95,11 +108,7 @@ export class ChartPanelComponent implements OnInit, OnDestroy {
         },
         ticks: {
           color: '#64748b',
-          callback: (value: number) => `$${value.toLocaleString('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 2
-          })}`,
+          callback: (value: number) => `$${value.toFixed(2)}`,
           maxTicksLimit: 6
         }
       }
@@ -109,46 +118,22 @@ export class ChartPanelComponent implements OnInit, OnDestroy {
       mode: 'index'
     },
     elements: {
-      line: {
-        tension: 0.4
-      },
       point: {
         radius: 0,
         hitRadius: 10,
-        hoverRadius: 4,
-        hoverBorderWidth: 2
+        hoverRadius: 4
       }
     },
-    transitions: {
-      zoom: {
-        animation: {
-          duration: 1000,
-          easing: 'easeOutQuart'
-        }
-      }
-    },
-    animation: true
+    animation: {
+      duration: 0
+    }
   };
 
-  ngOnInit() {
-    // Nie startujemy live updates automatycznie
+  selectStock(stockId: string) {
+    this.chartService.selectStock(stockId);
   }
 
-  ngOnDestroy() {
-    // Zatrzymujemy symulację przy zniszczeniu komponentu
-    this.chartService.configureSimulation({ enabled: false });
-  }
-
-  toggleLiveUpdates() {
-    this.isLiveEnabled = !this.isLiveEnabled;
-    this.chartService.configureSimulation({ enabled: this.isLiveEnabled });
-  }
-
-  refreshData() {
-    this.chartService.refreshData();
-  }
-
-  onTimeframeChange(timeframe: TimeframeOption): void {
+  onTimeframeChange(timeframe: TimeframeOption) {
     this.chartService.updateTimeframe(timeframe);
   }
 
@@ -160,10 +145,10 @@ export class ChartPanelComponent implements OnInit, OnDestroy {
     }`;
   }
 
-  getLiveUpdateButtonClass(): string {
+  getStockButtonClass(stockId: string): string {
     return `px-3 py-1 text-sm rounded ${
-      this.isLiveEnabled
-        ? 'bg-green-500 text-white'
+      this.chartService.getSelectedStockId()() === stockId
+        ? 'bg-blue-500 text-white'
         : 'bg-gray-100 hover:bg-gray-200'
     }`;
   }
