@@ -5,13 +5,193 @@ import { Indicator, IndicatorTimeframe, PricePoint, SimulationConfig, Stock } fr
   providedIn: 'root'
 })
 export class SimulationService {
+  private readonly PRICE_CHANGE_PARAMS = {
+    BASE_VOLATILITY: 0.0004,        // Jeszcze mniejsza bazowa zmienność
+    MOMENTUM_FACTOR: 0.0002,        // Mniejszy wpływ momentum
+    DAILY_LIMIT: 0.07,              // Limit dzienny ±7%
+    INTRADAY_LIMIT: 0.04,           // Nowy limit: ±4% w ciągu dnia
+    SPIKE_PROBABILITY: 0.01,        // Rzadsze spiki
+    SPIKE_MAGNITUDE: 0.0005,        // Mniejsze spiki
+    VOLATILITY_RANGE: {
+      MIN: 0.97,
+      MAX: 1.03                     // Mniejszy zakres zmienności
+    }
+  };
+
+  // Nowa metoda do wyliczania zmiany ceny - używana zarówno w historii jak i symulacji
+  private calculatePriceStep(
+    currentPrice: number,
+    lastDayStartPrice: number,
+    momentum: number,
+    volatilityFactor: number
+  ): {
+    newPrice: number,
+    newMomentum: number
+  } {
+    // Update momentum
+    const newMomentum = momentum * 0.7 + (Math.random() - 0.5) * this.PRICE_CHANGE_PARAMS.MOMENTUM_FACTOR;
+
+    // Podstawowa zmiana
+    const baseChange = (Math.random() - 0.5) * this.PRICE_CHANGE_PARAMS.BASE_VOLATILITY * volatilityFactor;
+
+    // Occasional spike
+    const spike = Math.random() < this.PRICE_CHANGE_PARAMS.SPIKE_PROBABILITY ?
+      (Math.random() - 0.5) * this.PRICE_CHANGE_PARAMS.SPIKE_MAGNITUDE : 0;
+
+    let potentialChange = baseChange + newMomentum + spike;
+
+    // Sprawdź limit dzienny
+    const dailyChange = ((currentPrice * (1 + potentialChange)) - lastDayStartPrice) / lastDayStartPrice;
+    if (Math.abs(dailyChange) > this.PRICE_CHANGE_PARAMS.DAILY_LIMIT) {
+      const direction = dailyChange > 0 ? 1 : -1;
+      return {
+        newPrice: lastDayStartPrice * (1 + direction * this.PRICE_CHANGE_PARAMS.DAILY_LIMIT),
+        newMomentum
+      };
+    }
+
+    // Sprawdź limit intraday względem ostatniej ceny
+    if (Math.abs(potentialChange) > this.PRICE_CHANGE_PARAMS.INTRADAY_LIMIT) {
+      const direction = potentialChange > 0 ? 1 : -1;
+      potentialChange = direction * this.PRICE_CHANGE_PARAMS.INTRADAY_LIMIT;
+    }
+
+    return {
+      newPrice: currentPrice * (1 + potentialChange),
+      newMomentum
+    };
+  }
+
+  private generateInitialHistory(startPrice: number, startDate: Date, endDate: Date): PricePoint[] {
+    const history: PricePoint[] = [];
+    let currentDate = new Date(startDate);
+    let currentPrice = startPrice;
+    let momentum = 0;
+    let volatilityFactor = 1;
+    let lastDayStartPrice = currentPrice;
+    let lastDay = currentDate.getDate();
+
+    while (currentDate <= endDate) {
+      if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+        const hours = currentDate.getHours();
+        if ((hours === 9 && currentDate.getMinutes() >= 30) || (hours > 9 && hours < 16)) {
+          // Reset dzienny
+          if (currentDate.getDate() !== lastDay) {
+            lastDayStartPrice = currentPrice;
+            lastDay = currentDate.getDate();
+          }
+
+          // Update volatility
+          if (Math.random() < 0.05) {
+            volatilityFactor = this.PRICE_CHANGE_PARAMS.VOLATILITY_RANGE.MIN +
+              Math.random() * (this.PRICE_CHANGE_PARAMS.VOLATILITY_RANGE.MAX - this.PRICE_CHANGE_PARAMS.VOLATILITY_RANGE.MIN);
+          }
+
+          const result = this.calculatePriceStep(currentPrice, lastDayStartPrice, momentum, volatilityFactor);
+          currentPrice = result.newPrice;
+          momentum = result.newMomentum;
+
+          history.push({
+            timestamp: currentDate.getTime(),
+            price: Number(currentPrice.toFixed(2)),
+            volume: Math.round(100000 + Math.random() * 900000)
+          });
+        }
+      }
+      currentDate = new Date(currentDate.getTime() + 5 * 60 * 1000);
+    }
+
+    return history;
+  }
+
+  private simulateDay() {
+    const stocks = this.stocks();
+    const currentDate = this.simulationConfig().currentDate;
+
+    const hours = currentDate.getHours();
+    const minutes = currentDate.getMinutes();
+    const isMarketOpen = (hours === 9 && minutes >= 30) || (hours > 9 && hours < 16);
+
+    if (!isMarketOpen || currentDate.getDay() === 0 || currentDate.getDay() === 6) {
+      this.moveToNextMarketOpen();
+      return;
+    }
+
+    const updatedStocks = stocks.map(stock => {
+      // Znajdź cenę z początku dnia
+      const today = new Date(currentDate);
+      today.setHours(0, 0, 0, 0);
+      const lastDayStartPrice = stock.priceHistory.find(p => new Date(p.timestamp) >= today)?.price || stock.currentPrice;
+
+      // Użyj tej samej logiki co w historycznych danych
+      const result = this.calculatePriceStep(
+        stock.currentPrice,
+        lastDayStartPrice,
+        0, // Reset momentum każdego dnia dla większej stabilności
+        1  // Stały volatilityFactor dla większej stabilności
+      );
+
+      const newPrice = Number(result.newPrice.toFixed(2));
+
+      const newPricePoint: PricePoint = {
+        timestamp: currentDate.getTime(),
+        price: newPrice,
+        volume: Math.round(100000 + Math.random() * 900000)
+      };
+
+      // Update wskaźników z mniejszym wpływem
+      const updatedIndicators = this.updateIndicators(stock.indicators);
+
+      return {
+        ...stock,
+        currentPrice: newPrice,
+        indicators: updatedIndicators,
+        priceHistory: [...stock.priceHistory, newPricePoint]
+      };
+    });
+
+    this.simulationConfig.update(config => ({
+      ...config,
+      currentDate: new Date(currentDate.getTime() + 5 * 60 * 1000)
+    }));
+
+    this.stocks.set(updatedStocks);
+  }
+
+  private updateIndicators(indicators: Indicator[]): Indicator[] {
+    return indicators.map(indicator => {
+      const difference = indicator.targetValue - indicator.value;
+      const change = difference * indicator.changeSpeed * 0.05; // Jeszcze mniejsza zmiana
+      const randomNoise = (Math.random() - 0.5) * indicator.volatility * 0.02;
+
+      const isNearTarget = Math.abs(difference) < 2;
+      const newTargetValue = isNearTarget
+        ? this.generateNewTarget(indicator.value, indicator.volatility)
+        : indicator.targetValue;
+
+      let newValue = indicator.value + change + randomNoise;
+      newValue = Math.max(35, Math.min(65, newValue));
+
+      return {
+        ...indicator,
+        value: Number(newValue.toFixed(2)),
+        targetValue: newTargetValue
+      };
+    });
+  }
+
+  private generateNewTarget(currentValue: number, volatility: number): number {
+    const maxChange = 3 + (volatility * 10); // Mniejsze zmiany targetów
+    const change = (Math.random() - 0.5) * maxChange;
+    return Math.max(35, Math.min(65, currentValue + change));
+  }
+
   private readonly simulationConfig = signal<SimulationConfig>({
     speed: 1000,
     isRunning: false,
     currentDate: new Date()
   });
 
-  // Stały zestaw wskaźników rynkowych
   private readonly marketIndicators = [
     {
       name: 'RSI (Relative Strength Index)',
@@ -98,7 +278,7 @@ export class SimulationService {
   private initializeIndicators(): Indicator[] {
     return this.marketIndicators.map(indicator => ({
       name: indicator.name,
-      value: 45 + Math.random() * 10, // Startowa wartość między 45 a 55 dla większej stabilności
+      value: 45 + Math.random() * 10,
       weight: indicator.baseWeight,
       timeframe: indicator.timeframe,
       trend: (Math.random() - 0.5) * 0.1,
@@ -130,142 +310,6 @@ export class SimulationService {
         currentPrice: stock.priceHistory[stock.priceHistory.length - 1]?.price || stock.currentPrice
       }))
     );
-  }
-
-  private generateInitialHistory(startPrice: number, startDate: Date, endDate: Date): PricePoint[] {
-    const history: PricePoint[] = [];
-    let currentDate = new Date(startDate);
-    let currentPrice = startPrice;
-    let momentum = 0;
-    let volatilityFactor = 1;
-
-    while (currentDate <= endDate) {
-      if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
-        const hours = currentDate.getHours();
-        if ((hours === 9 && currentDate.getMinutes() >= 30) || (hours > 9 && hours < 16)) {
-          momentum = momentum * 0.7 + (Math.random() - 0.5) * 0.002;
-
-          if (Math.random() < 0.05) {
-            volatilityFactor = 0.8 + Math.random() * 0.4; // Zakres 0.8-1.2
-          }
-
-          const baseChange = (Math.random() - 0.5) * 0.003 * volatilityFactor;
-          const change = (baseChange + momentum) * currentPrice;
-
-          const spike = Math.random() < 0.05 ?
-            (Math.random() - 0.5) * 0.004 * currentPrice * volatilityFactor : 0;
-
-          currentPrice += change + spike;
-          currentPrice = Math.max(currentPrice, currentPrice * 0.998);
-
-          history.push({
-            timestamp: currentDate.getTime(),
-            price: Number(currentPrice.toFixed(2)),
-            volume: Math.round(100000 + Math.random() * 900000)
-          });
-        }
-      }
-      currentDate = new Date(currentDate.getTime() + 5 * 60 * 1000);
-    }
-
-    return history;
-  }
-
-  private calculatePriceChange(indicators: Indicator[]): number {
-    let totalChange = 0;
-    let momentum = 0;
-
-    indicators.forEach(indicator => {
-      const normalizedValue = (indicator.value - 50) / 50;
-      let impact = normalizedValue * indicator.weight;
-
-      const volatilityImpact = (Math.random() - 0.5) * indicator.volatility * 0.3;
-
-      switch (indicator.timeframe) {
-        case IndicatorTimeframe.SHORT:
-          impact *= 0.006;
-          break;
-        case IndicatorTimeframe.MEDIUM:
-          impact *= 0.003;
-          break;
-        case IndicatorTimeframe.LONG:
-          impact *= 0.0015;
-          break;
-      }
-
-      impact += volatilityImpact;
-      totalChange += impact;
-    });
-
-    momentum = momentum * 0.6 + totalChange * 0.2;
-    const spike = Math.random() < 0.05 ? (Math.random() - 0.5) * 0.001 : 0;
-
-    return totalChange + momentum + spike;
-  }
-
-  private updateIndicators(indicators: Indicator[]): Indicator[] {
-    return indicators.map(indicator => {
-      const difference = indicator.targetValue - indicator.value;
-      const change = difference * indicator.changeSpeed * 0.3;
-      const randomNoise = (Math.random() - 0.5) * indicator.volatility * 0.2;
-
-      const isNearTarget = Math.abs(difference) < 2;
-      const newTargetValue = isNearTarget
-        ? this.generateNewTarget(indicator.value, indicator.volatility)
-        : indicator.targetValue;
-
-      return {
-        ...indicator,
-        value: Number((indicator.value + change + randomNoise).toFixed(2)),
-        targetValue: newTargetValue
-      };
-    });
-  }
-
-  private generateNewTarget(currentValue: number, volatility: number): number {
-    const maxChange = 15 + (volatility * 50);
-    const change = (Math.random() - 0.5) * maxChange;
-    return Math.max(0, Math.min(100, currentValue + change));
-  }
-
-  private simulateDay() {
-    const stocks = this.stocks();
-    const currentDate = this.simulationConfig().currentDate;
-
-    const hours = currentDate.getHours();
-    const minutes = currentDate.getMinutes();
-    const isMarketOpen = (hours === 9 && minutes >= 30) || (hours > 9 && hours < 16);
-
-    if (!isMarketOpen || currentDate.getDay() === 0 || currentDate.getDay() === 6) {
-      this.moveToNextMarketOpen();
-      return;
-    }
-
-    const updatedStocks = stocks.map(stock => {
-      const updatedIndicators = this.updateIndicators(stock.indicators);
-      const priceChange = this.calculatePriceChange(updatedIndicators);
-      const newPrice = Number((stock.currentPrice * (1 + priceChange)).toFixed(2));
-
-      const newPricePoint: PricePoint = {
-        timestamp: currentDate.getTime(),
-        price: newPrice,
-        volume: Math.round(100000 + Math.random() * 900000)
-      };
-
-      return {
-        ...stock,
-        currentPrice: newPrice,
-        indicators: updatedIndicators,
-        priceHistory: [...stock.priceHistory, newPricePoint]
-      };
-    });
-
-    this.simulationConfig.update(config => ({
-      ...config,
-      currentDate: new Date(currentDate.getTime() + 5 * 60 * 1000)
-    }));
-
-    this.stocks.set(updatedStocks);
   }
 
   private moveToNextMarketOpen() {
