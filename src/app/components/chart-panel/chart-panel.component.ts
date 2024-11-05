@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChartModule } from 'primeng/chart';
-import { ChartData, TimeframeOption } from '../../models/types';
+import { ChartService } from '../../services/chart.service';
+import { TimeframeOption } from '../../models/types';
 
 @Component({
   selector: 'app-chart-panel',
@@ -13,9 +14,9 @@ import { ChartData, TimeframeOption } from '../../models/types';
         <div class="flex flex-row items-center justify-between">
           <h2 class="text-lg font-semibold">S&P 500 - Daily Chart</h2>
           <div class="flex space-x-2">
-            @for (period of timeframes; track period) {
+            @for (period of chartService.timeframes; track period) {
               <button
-                (click)="timeframeChange.emit(period)"
+                (click)="onTimeframeChange(period)"
                 [class]="getTimeframeButtonClass(period)"
               >
                 {{period}}
@@ -27,23 +28,104 @@ import { ChartData, TimeframeOption } from '../../models/types';
       <div class="flex-1 p-4">
         <p-chart
           type="line"
-          [data]="chartData"
-          [options]="chartOptions"
+          [data]="chartService.getChartData()()"
+          [options]="options"
         ></p-chart>
       </div>
     </div>
   `
 })
-export class ChartPanelComponent {
-  @Input() timeframes!: TimeframeOption[];
-  @Input() selectedTimeframe!: TimeframeOption;
-  @Input() chartData!: ChartData;
-  @Input() chartOptions: any;
-  @Output() timeframeChange = new EventEmitter<TimeframeOption>();
+export class ChartPanelComponent implements OnInit {
+  readonly chartService = inject(ChartService);
+
+  readonly options = {
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        titleColor: '#1e293b',
+        bodyColor: '#1e293b',
+        borderColor: '#e2e8f0',
+        borderWidth: 1,
+        padding: 10,
+        displayColors: false,
+        callbacks: {
+          label: (context: any) => {
+            return `$${context.parsed.y.toFixed(2)}`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          color: '#64748b',
+          maxRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: 8
+        }
+      },
+      y: {
+        position: 'right',
+        grid: {
+          color: '#e2e8f0'
+        },
+        ticks: {
+          color: '#64748b',
+          callback: (value: number) => `$${value.toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2
+          })}`,
+          maxTicksLimit: 6
+        }
+      }
+    },
+    interaction: {
+      intersect: false,
+      mode: 'index'
+    },
+    elements: {
+      line: {
+        tension: 0.4
+      },
+      point: {
+        radius: 0,
+        hitRadius: 10,
+        hoverRadius: 4,
+        hoverBorderWidth: 2
+      }
+    },
+    transitions: {
+      zoom: {
+        animation: {
+          duration: 1000,
+          easing: 'easeOutQuart'
+        }
+      }
+    },
+    animation: true
+  };
+
+  ngOnInit() {
+    this.chartService.startLiveUpdates();
+  }
+
+  onTimeframeChange(timeframe: TimeframeOption): void {
+    this.chartService.updateTimeframe(timeframe);
+  }
 
   getTimeframeButtonClass(timeframe: string): string {
     return `px-3 py-1 text-sm rounded ${
-      this.selectedTimeframe === timeframe
+      this.chartService.getSelectedTimeframe()() === timeframe
         ? 'bg-blue-500 text-white'
         : 'bg-gray-100 hover:bg-gray-200'
     }`;

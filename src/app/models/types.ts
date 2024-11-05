@@ -1,14 +1,43 @@
-export interface NavigationItem {
-  name: string;
-  icon: string;
-  route: string;
+export interface AccountData {
+  balance: number;
+  username: string;
+  notifications: number;
+}
+
+export interface PricePoint {
+  timestamp: number;
+  price: number;
+  volume: number;
 }
 
 export interface PortfolioItem {
   symbol: string;
   shares: number;
-  change: number;
+  averagePrice: number;
+  currentPrice: number;
   value: number;
+  change: number;
+  profitLoss: number;
+}
+
+export interface PositionSnapshot {
+  symbol: string;
+  shares: number;
+  price: number;
+  value: number;
+  change: number;
+}
+
+export interface PortfolioSnapshot {
+  timestamp: Date;
+  positions: PositionSnapshot[];
+  totalValue: number;
+}
+
+export interface NavigationItem {
+  name: string;
+  icon: string;
+  route: string;
 }
 
 export interface LearningCard {
@@ -34,24 +63,9 @@ export interface ChartData {
 
 export interface TradeOrder {
   symbol: string;
-  amount: number;
   type: 'buy' | 'sell';
+  shares: number;
+  price: number;
 }
 
 export type TimeframeOption = '1D' | '1W' | '1M';
-
-export interface DifficultyLevel {
-  name: string;
-  icon: string;
-  color: string;
-  bgColor: string;
-  description: string;
-  recommendedLesson: string;
-  features: string[];
-}
-
-export interface DifficultyLevels {
-  [key: string]: DifficultyLevel;
-}
-
-export type DifficultyType = 'beginner' | 'intermediate' | 'advanced';

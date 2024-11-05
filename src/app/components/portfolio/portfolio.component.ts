@@ -1,6 +1,8 @@
-import { Component, Input } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { PortfolioItem } from '../../models/types';
+import { PortfolioService } from '../../services/portfolio.service';
+import { HistoricalTrackingService } from '../../services/historical-tracking.service';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-portfolio',
@@ -12,13 +14,13 @@ import { PortfolioItem } from '../../models/types';
         <div class="flex justify-between items-center">
           <h2 class="text-lg font-semibold">Your Portfolio</h2>
           <div class="text-sm text-gray-500">
-            Total Value: {{ getTotalValue() | currency }}
+            Total Value: {{ totalValue() | currency }}
           </div>
         </div>
       </div>
       <div class="p-4">
         <div class="space-y-3">
-          @for (item of portfolioItems; track item.symbol) {
+          @for (item of portfolio(); track item.symbol) {
             <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
               <div>
                 <div class="font-medium">{{item.symbol}}</div>
@@ -33,7 +35,7 @@ import { PortfolioItem } from '../../models/types';
             </div>
           }
 
-          @if (portfolioItems.length === 0) {
+          @if (portfolio().length === 0) {
             <div class="text-center p-4 text-gray-500">
               <i class="fas fa-folder-open mb-2"></i>
               <p>No stocks in your portfolio</p>
@@ -41,20 +43,19 @@ import { PortfolioItem } from '../../models/types';
           }
         </div>
 
-        <!-- Portfolio Summary -->
-        @if (portfolioItems.length > 0) {
+        @if (portfolio().length > 0) {
           <div class="mt-4 pt-4 border-t border-gray-100">
             <div class="grid grid-cols-2 gap-4">
               <div class="p-3 bg-gray-50 rounded-lg">
                 <div class="text-sm text-gray-500">Daily Change</div>
-                <div [class]="getPercentageClass(getDailyChange())">
-                  {{ getDailyChange() > 0 ? '+' : '' }}{{ getDailyChange().toFixed(2) }}%
+                <div [class]="getPercentageClass(dailyChange())">
+                  {{ dailyChange() > 0 ? '+' : '' }}{{ dailyChange().toFixed(2) }}%
                 </div>
               </div>
               <div class="p-3 bg-gray-50 rounded-lg">
                 <div class="text-sm text-gray-500">Total Return</div>
-                <div [class]="getPercentageClass(getTotalReturn())">
-                  {{ getTotalReturn() > 0 ? '+' : '' }}{{ getTotalReturn().toFixed(2) }}%
+                <div [class]="getPercentageClass(totalReturn())">
+                  {{ totalReturn() > 0 ? '+' : '' }}{{ totalReturn().toFixed(2) }}%
                 </div>
               </div>
             </div>
@@ -65,31 +66,37 @@ import { PortfolioItem } from '../../models/types';
   `
 })
 export class PortfolioComponent {
-  @Input() portfolioItems: PortfolioItem[] = [];
+  readonly portfolioService = inject(PortfolioService);
+  readonly historicalService = inject(HistoricalTrackingService);
+
+  portfolio = toSignal(this.portfolioService.portfolio$, { initialValue: [] });
+  historicalData = toSignal(this.historicalService.historicalData$, { initialValue: [] });
+
+  totalValue = computed(() =>
+    this.portfolio().reduce((sum, item) => sum + item.value, 0)
+  );
+
+  dailyChange = computed(() => {
+    const history = this.historicalData();
+    if (history.length < 2) return 0;
+
+    const previousValue = history[history.length - 2].totalValue;
+    const currentValue = history[history.length - 1].totalValue;
+
+    return ((currentValue - previousValue) / previousValue) * 100;
+  });
+
+  totalReturn = computed(() => {
+    const history = this.historicalData();
+    if (history.length === 0) return 0;
+
+    const initialValue = history[0].totalValue;
+    const currentValue = this.totalValue();
+
+    return ((currentValue - initialValue) / initialValue) * 100;
+  });
 
   getPercentageClass(change: number): string {
     return change >= 0 ? 'text-green-500' : 'text-red-500';
-  }
-
-  getTotalValue(): number {
-    return this.portfolioItems.reduce((sum, item) => sum + item.value, 0);
-  }
-
-  getDailyChange(): number {
-    const totalValue = this.getTotalValue();
-    if (totalValue === 0) return 0;
-
-    return this.portfolioItems.reduce((sum, item) => {
-      const weight = item.value / totalValue;
-      return sum + (item.change * weight);
-    }, 0);
-  }
-
-  getTotalReturn(): number {
-    // W rzeczywistej aplikacji wartość początkowa byłaby przechowywana w bazie
-    // Tutaj używamy przykładowej wartości
-    const initialInvestment = 10000;
-    const currentValue = this.getTotalValue();
-    return ((currentValue - initialInvestment) / initialInvestment) * 100;
   }
 }

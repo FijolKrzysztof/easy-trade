@@ -1,36 +1,68 @@
-import { Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-
-interface Stock {
-  symbol: string;
-  name: string;
-  price: number;
-  change: number;
-}
+import { inject, Injectable } from '@angular/core';
+import { AccountService } from './account.service';
+import { PortfolioService } from './portfolio.service';
+import { BehaviorSubject } from 'rxjs';
+import { TradeOrder } from '../models/types';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TradeService {
-  stockData = signal<Stock[]>([
-    { symbol: 'AAPL', name: 'Apple Inc.', price: 178.72, change: 2.34 },
-    { symbol: 'MSFT', name: 'Microsoft', price: 334.12, change: -1.23 },
-    { symbol: 'GOOGL', name: 'Alphabet', price: 125.23, change: 0.45 }
-  ]);
+  readonly accountService = inject(AccountService);
+  readonly portfolioService = inject(PortfolioService);
 
-  portfolioData = signal([
-    { name: 'AAPL', value: 1750, color: '#10B981' },
-    { name: 'MSFT', value: 1250, color: '#3B82F6' },
-    { name: 'Cash', value: 7000, color: '#6B7280' }
-  ]);
+  private readonly isProcessingSubject = new BehaviorSubject<boolean>(false);
 
-  constructor(private http: HttpClient) {}
+  isProcessing$ = this.isProcessingSubject.asObservable();
 
-  buy(symbol: string, amount: number) {
-    // Implement buy logic
+  executeOrder(order: TradeOrder): boolean {
+    this.isProcessingSubject.next(true);
+
+    const validation = this.validateOrder(order);
+    if (!validation.isValid) {
+      this.isProcessingSubject.next(false);
+      throw new Error(validation.message);
+    }
+
+    try {
+      const tradeValue = order.shares * order.price;
+
+      if (order.type === 'buy') {
+        this.accountService.updateBalance(-tradeValue);
+      } else {
+        this.accountService.updateBalance(tradeValue);
+      }
+
+      this.portfolioService.updatePortfolio(order);
+      this.isProcessingSubject.next(false);
+      return true;
+    } catch (error) {
+      this.isProcessingSubject.next(false);
+      throw error;
+    }
   }
 
-  sell(symbol: string, amount: number) {
-    // Implement sell logic
+  validateOrder(order: TradeOrder): { isValid: boolean; message?: string } {
+    if (order.shares < 1) {
+      return { isValid: false, message: 'Minimum order size is 1 share' };
+    }
+
+    if (order.type === 'buy') {
+      const totalCost = order.shares * order.price;
+      const currentBalance = this.accountService.getBalance();
+
+      if (totalCost > currentBalance) {
+        return { isValid: false, message: 'Insufficient funds' };
+      }
+    }
+
+    if (order.type === 'sell') {
+      const position = this.portfolioService.getPosition(order.symbol);
+      if (!position || position.shares < order.shares) {
+        return { isValid: false, message: 'Insufficient shares' };
+      }
+    }
+
+    return { isValid: true };
   }
 }

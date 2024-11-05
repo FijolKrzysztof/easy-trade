@@ -1,6 +1,6 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { PortfolioItem, TradeOrder } from '../../models/types';
+import { TradeOrder } from '../../models/types';
 import { PortfolioComponent } from '../portfolio/portfolio.component';
 import { BeginnerTradeFormComponent } from '../trading-forms/beginner-trade-form.component';
 import { IntermediateTradeFormComponent } from '../trading-forms/intermediate-trade-form.component';
@@ -43,12 +43,11 @@ import { AdvancedTradeFormComponent } from '../trading-forms/advanced-trade-form
         </div>
       </div>
 
-      <app-portfolio class="block" [portfolioItems]="portfolioItems" />
+      <app-portfolio class="block" />
     </div>
   `
 })
 export class TradingPanelComponent {
-  @Input() portfolioItems!: PortfolioItem[];
   @Input() difficultyLevel: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
   @Output() orderSubmit = new EventEmitter<TradeOrder>();
 
