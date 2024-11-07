@@ -1,10 +1,10 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TradeOrder } from '../../models/types';
 import { PortfolioComponent } from '../portfolio/portfolio.component';
 import { BeginnerTradeFormComponent } from '../trading-forms/beginner-trade-form.component';
 import { IntermediateTradeFormComponent } from '../trading-forms/intermediate-trade-form.component';
 import { AdvancedTradeFormComponent } from '../trading-forms/advanced-trade-form.component';
+import { TradeOrder } from '../../types/trading';
 
 @Component({
   selector: 'app-trading-panel',

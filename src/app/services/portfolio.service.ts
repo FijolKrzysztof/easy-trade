@@ -1,6 +1,7 @@
 import { BehaviorSubject } from 'rxjs';
 import { Injectable } from '@angular/core';
-import { PortfolioItem, TradeOrder } from '../models/types';
+import { PortfolioItem } from '../types/portfolio';
+import { TradeOrder } from '../types/trading';
 
 @Injectable({
   providedIn: 'root'

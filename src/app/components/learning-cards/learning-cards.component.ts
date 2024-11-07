@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LearningCard } from '../../models/types';
+import { LearningCard } from '../../types/ui';
 
 @Component({
   selector: 'app-learning-cards',

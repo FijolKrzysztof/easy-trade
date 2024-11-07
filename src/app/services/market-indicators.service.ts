@@ -1,35 +1,24 @@
-import { FundamentalIndicator, PricePoint, Stock, TechnicalIndicator } from '../models/types';
 import { Injectable } from '@angular/core';
-import { FUNDAMENTAL_INDICATOR_TYPES } from '../configs/market-config';
+import {
+  getAllFundamentalIndicators,
+  getAllTechnicalIndicators,
+} from '../configs/market-config';
+import { FundamentalIndicator, TechnicalIndicator, TechnicalIndicatorType } from '../types/indicators';
+import { PricePoint, Stock } from '../types/market';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MarketIndicatorsService {
-  private readonly technicalIndicatorTypes = [
-    'RSI',
-    'MACD',
-    'Volume Pressure'
-  ];
-
   initializeFundamentalIndicators(): FundamentalIndicator[] {
-    return FUNDAMENTAL_INDICATOR_TYPES.map(type => {
-      const range = type.range;
-      const value = range.neutral + (Math.random() - 0.5) * (range.max - range.min) * 0.2;
+    return getAllFundamentalIndicators().map(indicator => {
+      const value = indicator.neutral + (Math.random() - 0.5) * (indicator.max - indicator.min) * 0.2;
       return {
-        name: type.name,
+        name: indicator.name,
         value,
-        weight: type.weight
+        weight: indicator.weight
       };
     });
-  }
-
-  private generateNewFundamentalValue(indicator: FundamentalIndicator): number {
-    const type = FUNDAMENTAL_INDICATOR_TYPES.find(t => t.name === indicator.name)!;
-    const range = type.range;
-    const maxChange = (range.max - range.min) * 0.1;
-    const change = (Math.random() - 0.5) * maxChange;
-    return Math.max(range.min, Math.min(range.max, indicator.value + change));
   }
 
   updateFundamentalIndicators(stock: Stock): FundamentalIndicator[] {
@@ -40,13 +29,12 @@ export class MarketIndicatorsService {
   }
 
   normalizeFundamentalValue(indicator: FundamentalIndicator): number {
-    const type = FUNDAMENTAL_INDICATOR_TYPES.find(t => t.name === indicator.name)!;
-    const range = type.range;
+    const type = getAllFundamentalIndicators().find(t => t.name === indicator.name)!;
 
-    let normalizedValue = (indicator.value - range.min) / (range.max - range.min);
-    let normalizedNeutral = (range.neutral - range.min) / (range.max - range.min);
+    let normalizedValue = (indicator.value - type.min) / (type.max - type.min);
+    let normalizedNeutral = (type.neutral - type.min) / (type.max - type.min);
 
-    if (range.isReversed) {
+    if (type.isReversed) {
       normalizedValue = 1 - normalizedValue;
       normalizedNeutral = 1 - normalizedNeutral;
     }
@@ -57,21 +45,29 @@ export class MarketIndicatorsService {
   calculateTechnicalIndicators(stock: Stock): TechnicalIndicator[] {
     const priceHistory = stock.priceHistory;
 
-    return this.technicalIndicatorTypes.map(name => ({
-      name,
-      value: this.calculateIndicator(name, priceHistory)
+    return getAllTechnicalIndicators().map(indicator => ({
+      type: indicator.type,
+      name: indicator.name,
+      value: this.calculateIndicator(indicator.type, priceHistory)
     }));
   }
 
-  private calculateIndicator(name: string, priceHistory: PricePoint[]): number {
+  private generateNewFundamentalValue(indicator: FundamentalIndicator): number {
+    const type = getAllFundamentalIndicators().find(t => t.name === indicator.name)!;
+    const maxChange = (type.max - type.min) * 0.1;
+    const change = (Math.random() - 0.5) * maxChange;
+    return Math.max(type.min, Math.min(type.max, indicator.value + change));
+  }
+
+  private calculateIndicator(type: TechnicalIndicatorType, priceHistory: PricePoint[]): number {
     if (priceHistory.length < 15) return 50;
 
-    switch (name) {
-      case 'RSI':
+    switch (type) {
+      case TechnicalIndicatorType.RSI:
         return this.calculateRSI(priceHistory);
-      case 'MACD':
+      case TechnicalIndicatorType.MACD:
         return this.calculateMACD(priceHistory);
-      case 'Volume Pressure':
+      case TechnicalIndicatorType.VOLUME_PRESSURE:
         return this.calculateVolumePressure(priceHistory);
       default:
         return 50;

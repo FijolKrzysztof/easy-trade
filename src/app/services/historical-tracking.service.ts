@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { PortfolioService } from './portfolio.service';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { PortfolioSnapshot, PositionSnapshot } from '../models/types';
+import { PortfolioSnapshot, PositionSnapshot } from '../types/portfolio';
 
 @Injectable({
   providedIn: 'root'

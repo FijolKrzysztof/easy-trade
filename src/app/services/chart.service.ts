@@ -1,8 +1,9 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { SimulationService } from './simulation.service';
-import { ChartDataset, PricePoint, TimeframeOption } from '../models/types';
 import moment from 'moment';
 import { Moment } from 'moment';
+import { ChartDataset, TimeframeOption } from '../types/ui';
+import { PricePoint } from '../types/market';
 
 @Injectable({
   providedIn: 'root'

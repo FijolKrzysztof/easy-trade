@@ -1,4 +1,4 @@
-import { Stock } from '../models/types';
+import { Stock } from '../types/market';
 
 export const INITIAL_STOCKS: Stock[] = [
   {

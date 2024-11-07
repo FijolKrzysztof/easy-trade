@@ -7,8 +7,8 @@ import { NavigationMenuComponent } from '../navigation-menu/navigation-menu.comp
 import { ChartPanelComponent } from '../chart-panel/chart-panel.component';
 import { TradingPanelComponent } from '../trading-panel/trading-panel.component';
 import { LearningCardsComponent } from '../learning-cards/learning-cards.component';
-import { TradeOrder } from '../../models/types';
 import { DifficultySelectorComponent } from '../difficulty-selector/difficulty-selector.component';
+import { TradeOrder } from '../../types/trading';
 
 @Component({
   selector: 'app-easy-trade',

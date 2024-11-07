@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ChartModule } from 'primeng/chart';
 import { ChartService } from '../../services/chart.service';
 import { SimulationService } from '../../services/simulation.service';
-import { TimeframeOption } from '../../models/types';
 import * as moment from 'moment';
+import { TimeframeOption } from '../../types/ui';
 
 @Component({
   selector: 'app-chart-panel',

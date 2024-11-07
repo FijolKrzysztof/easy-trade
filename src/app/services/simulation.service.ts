@@ -1,19 +1,10 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { FundamentalIndicator, PricePoint, SimulationConfig, Stock } from '../models/types';
 import { INITIAL_STOCKS } from '../data/market-data';
-import {
-  BASE_VOLATILITY, FUNDAMENTAL_IMPACT_FACTOR,
-  MARKET_CLOSE_HOUR,
-  MARKET_CLOSE_MINUTE,
-  MARKET_OPEN_HOUR,
-  MARKET_OPEN_MINUTE,
-  MOMENTUM_FACTOR,
-  SPIKE_MAGNITUDE,
-  SPIKE_PROBABILITY,
-  TRADING_DAYS
-} from '../configs/market-config';
 import moment, { Moment } from 'moment';
 import { MarketIndicatorsService } from './market-indicators.service';
+import { MARKET_HOURS, SIMULATION_PARAMS, TRADING_DAYS } from '../configs/market-config';
+import { PricePoint, SimulationConfig, Stock } from '../types/market';
+import { FundamentalIndicator } from '../types/indicators';
 
 @Injectable({
   providedIn: 'root'
@@ -92,16 +83,16 @@ export class SimulationService {
     const lastDayOfMonth = currentMoment.clone().endOf('month').date();
     return (month % 3 === 2) &&
       (currentMoment.date() === lastDayOfMonth) &&
-      (currentMoment.hours() === MARKET_CLOSE_HOUR) &&
-      (currentMoment.minutes() === MARKET_CLOSE_MINUTE - 5);
+      (currentMoment.hours() === MARKET_HOURS.CLOSE.MINUTE) &&
+      (currentMoment.minutes() === MARKET_HOURS.CLOSE.MINUTE - 5);
   }
 
   private isMarketOpen(moment: Moment): boolean {
     const hours = moment.hours();
     const minutes = moment.minutes();
     const currentMinutes = hours * 60 + minutes;
-    const openMinutes = MARKET_OPEN_HOUR * 60 + MARKET_OPEN_MINUTE;
-    const closeMinutes = MARKET_CLOSE_HOUR * 60 + MARKET_CLOSE_MINUTE;
+    const openMinutes = MARKET_HOURS.OPEN.HOUR * 60 + MARKET_HOURS.OPEN.MINUTE;
+    const closeMinutes = MARKET_HOURS.CLOSE.HOUR * 60 + MARKET_HOURS.CLOSE.MINUTE;
     const isWorkday = TRADING_DAYS.includes(moment.day());
 
     return isWorkday && currentMinutes >= openMinutes && currentMinutes < closeMinutes;
@@ -111,12 +102,12 @@ export class SimulationService {
     const currentMoment = this.simulationConfig().currentDate;
     let nextMarketOpen = currentMoment.clone();
     const currentMinutes = currentMoment.hours() * 60 + currentMoment.minutes();
-    const closeMinutes = MARKET_CLOSE_HOUR * 60 + MARKET_CLOSE_MINUTE;
+    const closeMinutes = MARKET_HOURS.CLOSE.HOUR * 60 + MARKET_HOURS.CLOSE.MINUTE;
 
     if (currentMinutes >= closeMinutes) {
       nextMarketOpen.add(1, 'day')
-        .hours(MARKET_OPEN_HOUR)
-        .minutes(MARKET_OPEN_MINUTE)
+        .hours(MARKET_HOURS.OPEN.HOUR)
+        .minutes(MARKET_HOURS.OPEN.MINUTE)
         .seconds(0)
         .milliseconds(0);
     }
@@ -180,12 +171,12 @@ export class SimulationService {
     const fundamentalEffect = fundamentalIndicators.reduce((sum, indicator) => {
       const normalizedValue = this.marketIndicatorsService.normalizeFundamentalValue(indicator);
       return sum + normalizedValue * indicator.weight;
-    }, 0) * FUNDAMENTAL_IMPACT_FACTOR;
+    }, 0) * SIMULATION_PARAMS.FUNDAMENTAL_IMPACT_FACTOR;
 
-    const newMomentum = momentum * 0.7 + (Math.random() - 0.5) * MOMENTUM_FACTOR;
-    const baseChange = (Math.random() - 0.5) * BASE_VOLATILITY;
-    const spike = Math.random() < SPIKE_PROBABILITY ?
-      (Math.random() - 0.5) * SPIKE_MAGNITUDE : 0;
+    const newMomentum = momentum * 0.7 + (Math.random() - 0.5) * SIMULATION_PARAMS.MOMENTUM_FACTOR;
+    const baseChange = (Math.random() - 0.5) * SIMULATION_PARAMS.BASE_VOLATILITY;
+    const spike = Math.random() < SIMULATION_PARAMS.SPIKE_PROBABILITY ?
+      (Math.random() - 0.5) * SIMULATION_PARAMS.SPIKE_MAGNITUDE : 0;
 
     const priceChange = baseChange + newMomentum + spike + fundamentalEffect;
 

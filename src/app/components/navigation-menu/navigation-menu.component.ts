@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NavigationItem } from '../../models/types';
 import { Router } from "@angular/router";
+import { NavigationItem } from '../../types/ui';
 
 @Component({
   selector: 'app-navigation-menu',
