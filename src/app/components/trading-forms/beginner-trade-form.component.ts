@@ -2,6 +2,8 @@ import { Component, EventEmitter, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CommissionInfoComponent } from '../comission-info/comission-info.component';
+import { INITIAL_STOCKS } from '../../data/market-data';
+import { Stock } from '../../types/market';
 
 @Component({
   selector: 'app-beginner-trade-form',
@@ -11,18 +13,19 @@ import { CommissionInfoComponent } from '../comission-info/comission-info.compon
     <form [formGroup]="tradeForm" class="space-y-4">
       <div>
         <label class="text-sm text-gray-600 mb-1 block">Stock Symbol</label>
-        <input
-          type="text"
+        <select
           formControlName="symbol"
           class="w-full p-2 border rounded bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500"
-          placeholder="Enter stock symbol (e.g. AAPL)"
-          [maxLength]="5"
-        />
+        >
+          <option value="">Select a stock...</option>
+          @for (stock of getStocks(); track stock.ticker) {
+            <option [value]="stock.ticker">
+              {{ stock.ticker }} - {{ stock.name }}
+            </option>
+          }
+        </select>
         @if (tradeForm.get('symbol')?.errors?.['required'] && tradeForm.get('symbol')?.touched) {
           <span class="text-xs text-red-500">Symbol is required</span>
-        }
-        @if (tradeForm.get('symbol')?.errors?.['pattern']) {
-          <span class="text-xs text-red-500">Invalid symbol format</span>
         }
       </div>
 
@@ -103,6 +106,10 @@ export class BeginnerTradeFormComponent implements OnInit {
     this.tradeForm.valueChanges.subscribe(() => {
       this.updateEstimatedValue();
     });
+  }
+
+  getStocks(): Stock[] {
+    return INITIAL_STOCKS;
   }
 
   updateEstimatedValue() {

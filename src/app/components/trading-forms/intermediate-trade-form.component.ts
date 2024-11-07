@@ -2,6 +2,8 @@ import { Component, EventEmitter, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CommissionInfoComponent } from '../comission-info/comission-info.component';
+import { Stock } from '../../types/market';
+import { INITIAL_STOCKS } from '../../data/market-data';
 
 @Component({
   selector: 'app-intermediate-trade-form',
@@ -11,12 +13,17 @@ import { CommissionInfoComponent } from '../comission-info/comission-info.compon
     <form [formGroup]="tradeForm" class="space-y-3">
       <div>
         <label class="text-sm text-gray-600 mb-1 block">Stock Symbol</label>
-        <input
-          type="text"
+        <select
           formControlName="symbol"
           class="w-full p-2 border rounded bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500"
-          placeholder="Enter stock symbol..."
-        />
+        >
+          <option value="">Select a stock...</option>
+          @for (stock of getStocks(); track stock.ticker) {
+            <option [value]="stock.ticker">
+              {{ stock.ticker }} - {{ stock.name }}
+            </option>
+          }
+        </select>
       </div>
 
       <div>
@@ -132,6 +139,10 @@ export class IntermediateTradeFormComponent implements OnInit {
     this.tradeForm.valueChanges.subscribe(() => {
       this.updateEstimatedValue();
     });
+  }
+
+  getStocks(): Stock[] {
+    return INITIAL_STOCKS;
   }
 
   updateEstimatedValue() {

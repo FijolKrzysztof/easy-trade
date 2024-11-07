@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { AccountService } from './account.service';
 import { PortfolioService } from './portfolio.service';
 import { BehaviorSubject } from 'rxjs';
-import { TradeOrder } from '../models/types';
+import { TradeOrder } from '../types/trading';
 
 @Injectable({
   providedIn: 'root'

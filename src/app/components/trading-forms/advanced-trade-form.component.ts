@@ -2,6 +2,8 @@ import { Component, EventEmitter, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CommissionInfoComponent } from '../comission-info/comission-info.component';
+import { Stock } from '../../types/market';
+import { INITIAL_STOCKS } from '../../data/market-data';
 
 @Component({
   selector: 'app-advanced-trade-form',
@@ -12,16 +14,17 @@ import { CommissionInfoComponent } from '../comission-info/comission-info.compon
       <div class="grid grid-cols-2 gap-2">
         <div>
           <label class="text-sm text-gray-600 mb-1 block">Symbol</label>
-          <input
-            type="text"
+          <select
             formControlName="symbol"
             class="w-full p-2 border rounded bg-gray-50"
-            placeholder="Enter symbol..."
-            [maxLength]="5"
-          />
-          @if (tradeForm.get('symbol')?.errors?.['pattern']) {
-            <span class="text-xs text-red-500">Invalid symbol format</span>
-          }
+          >
+            <option value="">Select a stock...</option>
+            @for (stock of getStocks(); track stock.ticker) {
+              <option [value]="stock.ticker">
+                {{ stock.ticker }} - {{ stock.name }}
+              </option>
+            }
+          </select>
         </div>
         <div>
           <label class="text-sm text-gray-600 mb-1 block">Amount</label>
@@ -171,6 +174,10 @@ export class AdvancedTradeFormComponent implements OnInit {
     this.tradeForm.valueChanges.subscribe(() => {
       this.updateEstimatedValue();
     });
+  }
+
+  getStocks(): Stock[] {
+    return INITIAL_STOCKS;
   }
 
   onOrderTypeChange() {

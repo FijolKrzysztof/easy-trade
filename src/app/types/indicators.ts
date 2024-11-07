@@ -1,20 +1,3 @@
-export enum IndicatorTimeframe {
-  SHORT = 'short',   // dni
-  MEDIUM = 'medium', // tygodnie
-  LONG = 'long'     // miesiące
-}
-
-export interface Indicator {
-  name: string;
-  value: number;
-  weight: number;           // waga wpływu na cenę (0-1)
-  timeframe: IndicatorTimeframe;
-  trend: number;            // kierunek zmian (-1 do 1)
-  targetValue: number;      // wartość do której dąży wskaźnik
-  changeSpeed: number;      // jak szybko zmienia się wskaźnik (0-1)
-  volatility: number;
-}
-
 export enum TechnicalIndicatorType {
   RSI = 'RSI',
   MACD = 'MACD',
