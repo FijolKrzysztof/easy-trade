@@ -29,6 +29,8 @@ import { SimulationService } from "../../services/simulation.service";
               <option value="1000">1x Speed</option>
               <option value="500">2x Speed</option>
               <option value="200">5x Speed</option>
+              <option value="100">10x Speed</option>
+              <option value="50">20x Speed</option>
             </select>
             <span class="text-sm text-gray-600">
               {{ simulationConfig().currentDate | date:'medium' }}

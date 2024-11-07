@@ -6,15 +6,15 @@ import { Indicator, IndicatorTimeframe, PricePoint, SimulationConfig, Stock } fr
 })
 export class SimulationService {
   private readonly PRICE_CHANGE_PARAMS = {
-    BASE_VOLATILITY: 0.0004,        // Jeszcze mniejsza bazowa zmienność
-    MOMENTUM_FACTOR: 0.0002,        // Mniejszy wpływ momentum
+    BASE_VOLATILITY: 0.004,        // Jeszcze mniejsza bazowa zmienność
+    MOMENTUM_FACTOR: 0.002,        // Mniejszy wpływ momentum
     DAILY_LIMIT: 0.07,              // Limit dzienny ±7%
     INTRADAY_LIMIT: 0.04,           // Nowy limit: ±4% w ciągu dnia
-    SPIKE_PROBABILITY: 0.01,        // Rzadsze spiki
-    SPIKE_MAGNITUDE: 0.0005,        // Mniejsze spiki
+    SPIKE_PROBABILITY: 0.1,        // Rzadsze spiki
+    SPIKE_MAGNITUDE: 0.005,        // Mniejsze spiki
     VOLATILITY_RANGE: {
-      MIN: 0.97,
-      MAX: 1.03                     // Mniejszy zakres zmienności
+      MIN: 0.67,
+      MAX: 1.33                     // Mniejszy zakres zmienności
     }
   };
 
