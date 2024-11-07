@@ -5,12 +5,14 @@ import { MarketIndicatorsService } from './market-indicators.service';
 import { MARKET_HOURS, SIMULATION_PARAMS, TRADING_DAYS } from '../configs/market-config';
 import { PricePoint, SimulationConfig, Stock } from '../types/market';
 import { FundamentalIndicator } from '../types/indicators';
+import { PortfolioService } from './portfolio.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SimulationService {
   readonly marketIndicatorsService = inject(MarketIndicatorsService);
+  readonly portfolioService = inject(PortfolioService);
 
   private simulationInterval?: number;
   private readonly stocks = signal<Stock[]>(INITIAL_STOCKS);
@@ -69,6 +71,14 @@ export class SimulationService {
 
     const isQuarterEnd = this.isQuarterEnd(currentMoment);
     const updatedStocks = stocks.map(stock => this.updateStock(stock, currentMoment, isQuarterEnd));
+
+    // Aktualizacja cen w portfolio
+    const marketPrices = updatedStocks.reduce((prices, stock) => {
+      prices[stock.ticker] = stock.currentPrice;
+      return prices;
+    }, {} as { [symbol: string]: number });
+
+    this.portfolioService.updateMarketPrices(marketPrices);
 
     this.simulationConfig.update(config => ({
       ...config,

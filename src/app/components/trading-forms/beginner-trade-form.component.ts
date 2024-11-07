@@ -1,9 +1,11 @@
-import { Component, EventEmitter, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, inject, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommissionInfoComponent } from '../commission-info/commission-info.component';
-import { INITIAL_STOCKS } from '../../data/market-data';
 import { Stock } from '../../types/market';
+import { SimulationService } from '../../services/simulation.service';
+import { TradeService } from '../../services/trade.service';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-beginner-trade-form',
@@ -52,19 +54,19 @@ import { Stock } from '../../types/market';
         }
       </div>
 
-      <div class="mb-4"></div>
-
-      <app-commission-info
-        level="beginner"
-        [estimatedValue]="estimatedValue"
-        [amount]="tradeForm.get('amount')?.value || 0"
-      />
+      <div class="mb-4">
+        <app-commission-info
+          level="beginner"
+          [estimatedValue]="estimatedValue"
+          [amount]="tradeForm.get('amount')?.value || 0"
+        />
+      </div>
 
       <div class="flex space-x-2">
         <button
           type="button"
           (click)="onSubmitWithConfirmation('buy')"
-          [disabled]="!tradeForm.valid"
+          [disabled]="!tradeForm.valid || isProcessing()"
           class="flex-1 bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors disabled:opacity-50"
         >
           Buy
@@ -72,20 +74,33 @@ import { Stock } from '../../types/market';
         <button
           type="button"
           (click)="onSubmitWithConfirmation('sell')"
-          [disabled]="!tradeForm.valid"
+          [disabled]="!tradeForm.valid || isProcessing()"
           class="flex-1 bg-red-500 text-white p-2 rounded hover:bg-red-600 transition-colors disabled:opacity-50"
         >
           Sell
         </button>
       </div>
     </form>
+
+    @if (errorMessage) {
+      <div class="mt-4 p-3 bg-red-100 text-red-700 rounded">
+        {{ errorMessage }}
+      </div>
+    }
   `
 })
 export class BeginnerTradeFormComponent implements OnInit {
-  @Output() submitOrder = new EventEmitter<{ type: 'buy' | 'sell'; data: any }>();
+  @Output() orderSubmitted = new EventEmitter<void>();
+
+  private simulationService = inject(SimulationService);
+  private tradeService = inject(TradeService);
 
   tradeForm: FormGroup;
   estimatedValue: number = 0;
+  errorMessage: string | null = null;
+
+  stocks = this.simulationService.getStocks();
+  isProcessing = toSignal(this.tradeService.isProcessing$, { initialValue: false });
 
   constructor(private fb: FormBuilder) {
     this.tradeForm = this.fb.group({
@@ -105,32 +120,53 @@ export class BeginnerTradeFormComponent implements OnInit {
   ngOnInit() {
     this.tradeForm.valueChanges.subscribe(() => {
       this.updateEstimatedValue();
+      this.errorMessage = null;
     });
   }
 
   getStocks(): Stock[] {
-    return INITIAL_STOCKS;
+    return this.stocks();
+  }
+
+  getCurrentPrice(): number {
+    const symbol = this.tradeForm.get('symbol')?.value;
+    if (!symbol) return 0;
+
+    const stock = this.stocks().find(s => s.ticker === symbol);
+    return stock?.currentPrice || 0;
   }
 
   updateEstimatedValue() {
-    const mockPrice = 150;
+    const currentPrice = this.getCurrentPrice();
     const amount = this.tradeForm.get('amount')?.value || 0;
-    this.estimatedValue = amount * mockPrice;
+    this.estimatedValue = amount * currentPrice;
   }
 
   async onSubmitWithConfirmation(type: 'buy' | 'sell') {
     if (this.tradeForm.valid) {
       const confirmed = await this.showConfirmationDialog(type);
       if (confirmed) {
-        this.submitOrder.emit({
-          type,
-          data: {
-            ...this.tradeForm.value,
-            orderType: 'market',
-            estimatedValue: this.estimatedValue
+        try {
+          const order = {
+            symbol: this.tradeForm.get('symbol')?.value,
+            shares: Number(this.tradeForm.get('amount')?.value),
+            type: type,
+            orderType: 'market' as 'market',
+            price: this.getCurrentPrice()
+          };
+
+          const result = this.tradeService.executeMarketOrder(order);
+
+          if (result.success) {
+            this.tradeForm.reset();
+            this.errorMessage = null;
+            this.orderSubmitted.emit();
+          } else {
+            this.errorMessage = result.error as string;
           }
-        });
-        this.tradeForm.reset();
+        } catch (error) {
+          this.errorMessage = error instanceof Error ? error.message : 'An error occurred';
+        }
       }
     }
   }
@@ -138,10 +174,13 @@ export class BeginnerTradeFormComponent implements OnInit {
   private async showConfirmationDialog(type: 'buy' | 'sell'): Promise<boolean> {
     const symbol = this.tradeForm.get('symbol')?.value;
     const amount = this.tradeForm.get('amount')?.value;
+    const currentPrice = this.getCurrentPrice();
+    const total = amount * currentPrice;
 
     return window.confirm(
       `Are you sure you want to ${type} ${amount} shares of ${symbol}?\n\n` +
-      `Estimated value: $${this.estimatedValue.toFixed(2)}`
+      `Current Price: ${currentPrice.toFixed(2)}\n` +
+      `Total Value: $${total.toFixed(2)}`
     );
   }
 }

@@ -1,57 +1,81 @@
-import { inject, Injectable } from '@angular/core';
-import { AccountService } from './account.service';
-import { PortfolioService } from './portfolio.service';
+import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { TradeOrder } from '../types/trading';
+import { TradeOrder, TradeResult } from '../types/trading';
+import { PortfolioService } from './portfolio.service';
+import { CommissionService } from './commission.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TradeService {
-  readonly accountService = inject(AccountService);
-  readonly portfolioService = inject(PortfolioService);
-
-  private readonly isProcessingSubject = new BehaviorSubject<boolean>(false);
-
+  private isProcessingSubject = new BehaviorSubject<boolean>(false);
   isProcessing$ = this.isProcessingSubject.asObservable();
 
-  executeOrder(order: TradeOrder): boolean {
+  constructor(
+    private portfolioService: PortfolioService,
+    private commissionService: CommissionService
+  ) {}
+
+  executeMarketOrder(order: TradeOrder): TradeResult {
     this.isProcessingSubject.next(true);
 
-    const validation = this.validateOrder(order);
-    if (!validation.isValid) {
-      this.isProcessingSubject.next(false);
-      throw new Error(validation.message);
-    }
-
     try {
-      const tradeValue = order.shares * order.price;
-
-      if (order.type === 'buy') {
-        this.accountService.updateBalance(-tradeValue);
-      } else {
-        this.accountService.updateBalance(tradeValue);
+      // 1. Walidacja zamówienia
+      const validation = this.validateOrder(order);
+      if (!validation.isValid) {
+        return {
+          success: false,
+          error: validation.message,
+          executionPrice: order.price,
+          commission: 0,
+          totalCost: 0
+        };
       }
 
-      this.portfolioService.updatePortfolio(order);
-      this.isProcessingSubject.next(false);
-      return true;
+      // 2. Obliczenie prowizji
+      const commission = this.calculateTotalCommission(order);
+
+      // 3. Wykonanie transakcji
+      if (order.type === 'buy') {
+        this.portfolioService.addPosition(order, commission);
+      } else {
+        this.portfolioService.reducePosition(order, commission);
+      }
+
+      const totalCost = order.type === 'buy'
+        ? (order.shares * order.price) + commission
+        : (order.shares * order.price) - commission;
+
+      // 4. Zwrócenie wyniku
+      return {
+        success: true,
+        executionPrice: order.price,
+        commission,
+        totalCost
+      };
     } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'An error occurred',
+        executionPrice: order.price,
+        commission: 0,
+        totalCost: 0
+      };
+    } finally {
       this.isProcessingSubject.next(false);
-      throw error;
     }
   }
 
-  validateOrder(order: TradeOrder): { isValid: boolean; message?: string } {
-    if (order.shares < 1) {
-      return { isValid: false, message: 'Minimum order size is 1 share' };
+  private validateOrder(order: TradeOrder): { isValid: boolean; message?: string } {
+    if (order.shares <= 0) {
+      return { isValid: false, message: 'Invalid number of shares' };
     }
 
     if (order.type === 'buy') {
-      const totalCost = order.shares * order.price;
-      const currentBalance = this.accountService.getBalance();
+      const commission = this.calculateTotalCommission(order);
+      const totalCost = (order.shares * order.price) + commission;
 
-      if (totalCost > currentBalance) {
+      if (totalCost > this.portfolioService.getCashBalance()) {
         return { isValid: false, message: 'Insufficient funds' };
       }
     }
@@ -64,5 +88,13 @@ export class TradeService {
     }
 
     return { isValid: true };
+  }
+
+  private calculateTotalCommission(order: TradeOrder): number {
+    return this.commissionService.calculateTotalFees({
+      shares: order.shares,
+      estimatedValue: order.shares * order.price,
+      orderType: 'market'
+    });
   }
 }

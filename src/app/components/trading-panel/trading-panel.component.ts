@@ -26,7 +26,6 @@ import { TradeOrder } from '../../types/trading';
           @switch (difficultyLevel) {
             @case ('beginner') {
               <app-beginner-trade-form
-                (submitOrder)="submitOrder($event)"
               />
             }
             @case ('intermediate') {

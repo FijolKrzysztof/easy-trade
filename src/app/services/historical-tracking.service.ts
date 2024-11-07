@@ -19,71 +19,14 @@ export class HistoricalTrackingService {
           shares: 10,
           price: 170.5,
           value: 1705.0,
-          change: 0
-        },
-        {
-          symbol: 'GOOGL',
-          shares: 5,
-          price: 2750.0,
-          value: 13750.0,
-          change: 0
+          unrealizedPL: 50.0,
+          averagePrice: 165.5
         }
       ],
-      totalValue: 15455.0
-    },
-    {
-      timestamp: new Date('2024-02-01'),
-      positions: [
-        {
-          symbol: 'AAPL',
-          shares: 10,
-          price: 175.5,
-          value: 1755.0,
-          change: 2.93
-        },
-        {
-          symbol: 'GOOGL',
-          shares: 5,
-          price: 2850.0,
-          value: 14250.0,
-          change: 3.64
-        },
-        {
-          symbol: 'MSFT',
-          shares: 8,
-          price: 310.0,
-          value: 2480.0,
-          change: 0
-        }
-      ],
-      totalValue: 18485.0
-    },
-    {
-      timestamp: new Date('2024-03-01'),
-      positions: [
-        {
-          symbol: 'AAPL',
-          shares: 15,
-          price: 180.5,
-          value: 2707.5,
-          change: 54.27
-        },
-        {
-          symbol: 'GOOGL',
-          shares: 5,
-          price: 2900.0,
-          value: 14500.0,
-          change: 1.75
-        },
-        {
-          symbol: 'MSFT',
-          shares: 8,
-          price: 315.0,
-          value: 2520.0,
-          change: 1.61
-        }
-      ],
-      totalValue: 19727.5
+      totalValue: 1705.0,
+      cashBalance: 8000.0,
+      unrealizedPL: 50.0,
+      totalEquity: 9705.0
     }
   ];
 
@@ -93,20 +36,24 @@ export class HistoricalTrackingService {
 
   async recordSnapshot(): Promise<void> {
     const currentPortfolio = this.portfolio();
-    const totalValue = currentPortfolio.reduce((sum, item) => sum + item.value, 0);
+    const portfolioSummary = this.portfolioService.getPortfolioSummary();
 
     const positions: PositionSnapshot[] = currentPortfolio.map(item => ({
       symbol: item.symbol,
       shares: item.shares,
       price: item.currentPrice,
       value: item.value,
-      change: item.change
+      unrealizedPL: item.unrealizedPL,
+      averagePrice: item.averagePrice
     }));
 
     const newSnapshot: PortfolioSnapshot = {
       timestamp: new Date(),
       positions,
-      totalValue
+      totalValue: portfolioSummary.totalValue,
+      cashBalance: portfolioSummary.cashBalance,
+      unrealizedPL: portfolioSummary.unrealizedPL,
+      totalEquity: portfolioSummary.totalEquity
     };
 
     const currentHistory = this.historicalDataSubject.value;
@@ -138,13 +85,33 @@ export class HistoricalTrackingService {
       .filter((pos): pos is PositionSnapshot => pos !== undefined);
   }
 
-  getGrowthRate(): number {
+  getGrowthRate(metric: 'totalValue' | 'totalEquity' = 'totalEquity'): number {
     const history = this.historicalDataSubject.value;
     if (history.length < 2) return 0;
 
-    const firstValue = history[0].totalValue;
-    const lastValue = history[history.length - 1].totalValue;
+    const firstValue = history[0][metric];
+    const lastValue = history[history.length - 1][metric];
 
     return ((lastValue - firstValue) / firstValue) * 100;
+  }
+
+  getPerformanceMetrics() {
+    const history = this.historicalDataSubject.value;
+    if (history.length < 2) {
+      return {
+        totalReturn: 0,
+        unrealizedReturn: 0,
+        cashReturn: 0
+      };
+    }
+
+    const first = history[0];
+    const last = history[history.length - 1];
+
+    return {
+      totalReturn: ((last.totalEquity - first.totalEquity) / first.totalEquity) * 100,
+      unrealizedReturn: ((last.unrealizedPL - first.unrealizedPL) / first.totalEquity) * 100,
+      cashReturn: ((last.cashBalance - first.cashBalance) / first.cashBalance) * 100
+    };
   }
 }
