@@ -1,8 +1,8 @@
-import { Injectable, signal } from '@angular/core';
-import { PricePoint, SimulationConfig, Stock } from '../models/types';
+import { inject, Injectable, signal } from '@angular/core';
+import { FundamentalIndicator, PricePoint, SimulationConfig, Stock } from '../models/types';
 import { INITIAL_STOCKS } from '../data/market-data';
 import {
-  BASE_VOLATILITY,
+  BASE_VOLATILITY, FUNDAMENTAL_IMPACT_FACTOR,
   MARKET_CLOSE_HOUR,
   MARKET_CLOSE_MINUTE,
   MARKET_OPEN_HOUR,
@@ -13,19 +13,21 @@ import {
   TRADING_DAYS
 } from '../configs/market-config';
 import moment, { Moment } from 'moment';
+import { MarketIndicatorsService } from './market-indicators.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SimulationService {
+  readonly marketIndicatorsService = inject(MarketIndicatorsService);
+
+  private simulationInterval?: number;
+  private readonly stocks = signal<Stock[]>(INITIAL_STOCKS);
   private readonly simulationConfig = signal<SimulationConfig>({
     speed: 1000,
     isRunning: false,
     currentDate: moment()
   });
-
-  private readonly stocks = signal<Stock[]>(INITIAL_STOCKS);
-  private simulationInterval?: number;
 
   constructor() {
     this.initializePriceHistory();
@@ -74,7 +76,8 @@ export class SimulationService {
       return;
     }
 
-    const updatedStocks = stocks.map(stock => this.updateStock(stock, currentMoment));
+    const isQuarterEnd = this.isQuarterEnd(currentMoment);
+    const updatedStocks = stocks.map(stock => this.updateStock(stock, currentMoment, isQuarterEnd));
 
     this.simulationConfig.update(config => ({
       ...config,
@@ -82,6 +85,15 @@ export class SimulationService {
     }));
 
     this.stocks.set(updatedStocks);
+  }
+
+  private isQuarterEnd(currentMoment: Moment): boolean {
+    const month = currentMoment.month();
+    const lastDayOfMonth = currentMoment.clone().endOf('month').date();
+    return (month % 3 === 2) &&
+      (currentMoment.date() === lastDayOfMonth) &&
+      (currentMoment.hours() === MARKET_CLOSE_HOUR) &&
+      (currentMoment.minutes() === MARKET_CLOSE_MINUTE - 5);
   }
 
   private isMarketOpen(moment: Moment): boolean {
@@ -119,45 +131,63 @@ export class SimulationService {
     }));
   }
 
-  private calculateVolume(priceChange: number): number {
+  private calculateVolume(currentPrice: number, newPrice: number): number {
+    const priceChange = (newPrice - currentPrice) / currentPrice;
     const baseVolume = 1000 + Math.random() * 9000;
     const volumeMultiplier = 1 + Math.abs(priceChange) * 10;
 
     return Math.round(baseVolume * volumeMultiplier);
   }
 
-  private updateStock(stock: Stock, currentMoment: Moment): Stock {
+  private updateStock(stock: Stock, currentMoment: Moment, isQuarterEnd: boolean): Stock {
+    const fundamentalIndicators = isQuarterEnd
+      ? this.marketIndicatorsService.updateFundamentalIndicators(stock)
+      : stock.fundamentalIndicators;
+
     const { newPrice, newMomentum } = this.calculatePriceStep(
       stock.currentPrice,
-      stock.momentum
+      stock.momentum,
+      fundamentalIndicators
     );
-
-    const priceChange = (newPrice - stock.currentPrice) / stock.currentPrice;
 
     const newPricePoint: PricePoint = {
       timestamp: currentMoment.valueOf(),
       price: Number(newPrice.toFixed(2)),
-      volume: this.calculateVolume(priceChange)
+      volume: this.calculateVolume(stock.currentPrice, newPrice)
     };
+
+    const newHistory = [...stock.priceHistory, newPricePoint];
+    const technicalIndicators = this.marketIndicatorsService.calculateTechnicalIndicators({
+      ...stock,
+      priceHistory: newHistory
+    });
 
     return {
       ...stock,
       currentPrice: newPrice,
       momentum: newMomentum,
-      priceHistory: [...stock.priceHistory, newPricePoint]
+      priceHistory: newHistory,
+      technicalIndicators,
+      fundamentalIndicators
     };
   }
 
   private calculatePriceStep(
     currentPrice: number,
-    momentum: number
-  ): { newPrice: number, newMomentum: number } {
+    momentum: number,
+    fundamentalIndicators: FundamentalIndicator[]
+  ): { newPrice: number; newMomentum: number } {
+    const fundamentalEffect = fundamentalIndicators.reduce((sum, indicator) => {
+      const normalizedValue = this.marketIndicatorsService.normalizeFundamentalValue(indicator);
+      return sum + normalizedValue * indicator.weight;
+    }, 0) * FUNDAMENTAL_IMPACT_FACTOR;
+
     const newMomentum = momentum * 0.7 + (Math.random() - 0.5) * MOMENTUM_FACTOR;
     const baseChange = (Math.random() - 0.5) * BASE_VOLATILITY;
     const spike = Math.random() < SPIKE_PROBABILITY ?
       (Math.random() - 0.5) * SPIKE_MAGNITUDE : 0;
 
-    const priceChange = baseChange + newMomentum + spike;
+    const priceChange = baseChange + newMomentum + spike + fundamentalEffect;
 
     return {
       newPrice: currentPrice * (1 + priceChange),
@@ -173,8 +203,8 @@ export class SimulationService {
 
     while (currentMoment.isSameOrBefore(endMoment)) {
       if (this.isMarketOpen(currentMoment)) {
-        const result = this.calculatePriceStep(currentPrice, momentum);
-        const priceChange = (result.newPrice - currentPrice) / currentPrice;
+        const result = this.calculatePriceStep(currentPrice, momentum, []);
+        const volume = this.calculateVolume(currentPrice, result.newPrice);
 
         currentPrice = result.newPrice;
         momentum = result.newMomentum;
@@ -182,7 +212,7 @@ export class SimulationService {
         history.push({
           timestamp: currentMoment.valueOf(),
           price: Number(currentPrice.toFixed(2)),
-          volume: this.calculateVolume(priceChange)
+          volume: volume,
         });
       }
       currentMoment.add(5, 'minutes');
@@ -201,17 +231,25 @@ export class SimulationService {
     }));
 
     this.stocks.update(stocks =>
-      stocks.map(stock => ({
-        ...stock,
-        priceHistory: this.generateInitialHistory(stock.currentPrice, thirtyDaysAgo, now)
-      }))
-    );
+      stocks.map(stock => {
+        const priceHistory = this.generateInitialHistory(
+          stock.currentPrice,
+          thirtyDaysAgo,
+          now
+        );
 
-    this.stocks.update(stocks =>
-      stocks.map(stock => ({
-        ...stock,
-        currentPrice: stock.priceHistory[stock.priceHistory.length - 1]?.price || stock.currentPrice
-      }))
+        const stockWithHistory = {
+          ...stock,
+          priceHistory,
+          currentPrice: priceHistory[priceHistory.length - 1]?.price || stock.currentPrice
+        };
+
+        return {
+          ...stockWithHistory,
+          technicalIndicators: this.marketIndicatorsService.calculateTechnicalIndicators(stockWithHistory),
+          fundamentalIndicators: this.marketIndicatorsService.initializeFundamentalIndicators()
+        };
+      })
     );
   }
 }

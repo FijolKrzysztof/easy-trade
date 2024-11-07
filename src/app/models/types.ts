@@ -61,33 +61,6 @@ export interface TradeOrder {
 
 export type TimeframeOption = '1D' | '1W' | '1M';
 
-export enum IndicatorTimeframe {
-  SHORT = 'short',   // dni
-  MEDIUM = 'medium', // tygodnie
-  LONG = 'long'     // miesiące
-}
-
-export interface Indicator {
-  name: string;
-  value: number;
-  weight: number;           // waga wpływu na cenę (0-1)
-  timeframe: IndicatorTimeframe;
-  trend: number;            // kierunek zmian (-1 do 1)
-  targetValue: number;      // wartość do której dąży wskaźnik
-  changeSpeed: number;      // jak szybko zmienia się wskaźnik (0-1)
-  volatility: number;
-}
-
-export interface Stock {
-  id: string;
-  name: string;
-  ticker: string;
-  currentPrice: number;
-  indicators: Indicator[];
-  priceHistory: PricePoint[];
-  momentum: number;
-}
-
 export interface SimulationConfig {
   speed: number;
   isRunning: boolean;
@@ -110,4 +83,40 @@ export interface ChartDataset {
     backgroundColor: string;
     tension: number;
   }>;
+}
+
+export interface TechnicalIndicator {
+  name: string;
+  value: number;
+}
+
+export interface FundamentalIndicator {
+  name: string;
+  value: number;
+  weight: number;
+}
+
+export interface Stock {
+  id: string;
+  name: string;
+  ticker: string;
+  currentPrice: number;
+  technicalIndicators: TechnicalIndicator[];
+  fundamentalIndicators: FundamentalIndicator[];
+  priceHistory: PricePoint[];
+  momentum: number;
+}
+
+export interface FundamentalRange {
+  min: number;
+  max: number;
+  neutral: number;
+  isReversed: boolean;
+  description: string;
+}
+
+export interface FundamentalIndicatorType {
+  name: string;
+  weight: number;
+  range: FundamentalRange;
 }
