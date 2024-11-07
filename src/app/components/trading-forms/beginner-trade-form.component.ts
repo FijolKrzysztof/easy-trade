@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { CommissionInfoComponent } from '../comission-info/comission-info.component';
+import { CommissionInfoComponent } from '../commission-info/commission-info.component';
 import { INITIAL_STOCKS } from '../../data/market-data';
 import { Stock } from '../../types/market';
 
