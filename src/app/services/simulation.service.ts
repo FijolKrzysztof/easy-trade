@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
-import { Indicator, PricePoint, SimulationConfig, Stock } from '../models/types';
-import { INITIAL_STOCKS, MARKET_INDICATORS } from '../data/market-data';
+import { PricePoint, SimulationConfig, Stock } from '../models/types';
+import { INITIAL_STOCKS } from '../data/market-data';
 import {
   BASE_VOLATILITY,
   MARKET_CLOSE_HOUR,
@@ -28,7 +28,6 @@ export class SimulationService {
   private simulationInterval?: number;
 
   constructor() {
-    this.initializeStocks();
     this.initializePriceHistory();
   }
 
@@ -145,7 +144,6 @@ export class SimulationService {
       ...stock,
       currentPrice: newPrice,
       momentum: newMomentum,
-      indicators: this.updateIndicators(stock.indicators),
       priceHistory: [...stock.priceHistory, newPricePoint]
     };
   }
@@ -191,56 +189,6 @@ export class SimulationService {
     }
 
     return history;
-  }
-
-  private updateIndicators(indicators: Indicator[]): Indicator[] {
-    return indicators.map(indicator => {
-      const difference = indicator.targetValue - indicator.value;
-      const change = difference * indicator.changeSpeed * 0.05;
-      const randomNoise = (Math.random() - 0.5) * indicator.volatility * 0.02;
-
-      const isNearTarget = Math.abs(difference) < 2;
-      const newTargetValue = isNearTarget
-        ? this.generateNewTarget(indicator.value, indicator.volatility)
-        : indicator.targetValue;
-
-      let newValue = indicator.value + change + randomNoise;
-      newValue = Math.max(35, Math.min(65, newValue));
-
-      return {
-        ...indicator,
-        value: Number(newValue.toFixed(2)),
-        targetValue: newTargetValue
-      };
-    });
-  }
-
-  private generateNewTarget(currentValue: number, volatility: number): number {
-    const maxChange = 3 + (volatility * 10);
-    const change = (Math.random() - 0.5) * maxChange;
-    return Math.max(35, Math.min(65, currentValue + change));
-  }
-
-  private initializeStocks(): void {
-    this.stocks.update(stocks =>
-      stocks.map(stock => ({
-        ...stock,
-        indicators: this.initializeIndicators(),
-      }))
-    );
-  }
-
-  private initializeIndicators(): Indicator[] {
-    return MARKET_INDICATORS.map(indicator => ({
-      name: indicator.name,
-      value: 45 + Math.random() * 10,
-      weight: indicator.baseWeight,
-      timeframe: indicator.timeframe,
-      trend: (Math.random() - 0.5) * 0.1,
-      targetValue: 40 + Math.random() * 20,
-      changeSpeed: 0.05 + Math.random() * 0.05,
-      volatility: indicator.volatility
-    }));
   }
 
   private initializePriceHistory(): void {
