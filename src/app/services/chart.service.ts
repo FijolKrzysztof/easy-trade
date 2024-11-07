@@ -1,21 +1,18 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { SimulationService } from './simulation.service';
 import { ChartDataset, PricePoint, TimeframeOption } from '../models/types';
+import moment from 'moment';
+import { Moment } from 'moment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChartService {
   private readonly simulationService = inject(SimulationService);
-
-  // Sygnały
   private readonly selectedTimeframe = signal<TimeframeOption>('1D');
   private readonly selectedStockId = signal<string>('1');
-
-  // Timeframes
   readonly timeframes: TimeframeOption[] = ['1D', '1W', '1M'];
 
-  // Computed signal dla danych wykresu
   readonly chartData = computed(() => {
     const stock = this.simulationService.getStocks()()
       .find(s => s.id === this.selectedStockId());
@@ -35,23 +32,33 @@ export class ChartService {
     }
   });
 
-  private prepareDayChartData(priceHistory: PricePoint[], currentDate: Date): ChartDataset {
-    const startOfDay = new Date(currentDate);
-    startOfDay.setHours(0, 0, 0, 0);
+  selectStock(stockId: string): void {
+    this.selectedStockId.set(stockId);
+  }
 
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setHours(23, 59, 59, 999);
+  updateTimeframe(timeframe: TimeframeOption): void {
+    this.selectedTimeframe.set(timeframe);
+  }
+
+  getSelectedTimeframe() {
+    return this.selectedTimeframe;
+  }
+
+  getSelectedStockId() {
+    return this.selectedStockId;
+  }
+
+  private prepareDayChartData(priceHistory: PricePoint[], currentDate: Moment): ChartDataset {
+    const startOfDay = moment(currentDate).startOf('day');
+    const endOfDay = moment(currentDate).endOf('day');
 
     const filteredData = priceHistory.filter(point => {
-      const pointDate = new Date(point.timestamp);
-      return pointDate >= startOfDay && pointDate <= endOfDay;
+      const pointDate = moment(point.timestamp);
+      return pointDate.isBetween(startOfDay, endOfDay, 'minute', '[]');
     });
 
     return {
-      labels: filteredData.map(point => {
-        const date = new Date(point.timestamp);
-        return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-      }),
+      labels: filteredData.map(point => moment(point.timestamp).format('HH:mm')),
       datasets: [{
         label: 'Price',
         data: filteredData.map(point => point.price),
@@ -63,20 +70,16 @@ export class ChartService {
     };
   }
 
-  private prepareWeekChartData(priceHistory: PricePoint[], currentDate: Date): ChartDataset {
-    const startOfWeek = new Date(currentDate);
-    startOfWeek.setDate(startOfWeek.getDate() - 7);
+  private prepareWeekChartData(priceHistory: PricePoint[], currentDate: Moment): ChartDataset {
+    const startOfWeek = moment(currentDate).subtract(7, 'days');
 
     const filteredData = priceHistory.filter(point => {
-      const pointDate = new Date(point.timestamp);
-      return pointDate >= startOfWeek && pointDate <= currentDate;
+      const pointDate = moment(point.timestamp);
+      return pointDate.isBetween(startOfWeek, currentDate, 'minute', '[]');
     });
 
     return {
-      labels: filteredData.map(point => {
-        const date = new Date(point.timestamp);
-        return `${date.toLocaleDateString('en-US', { weekday: 'short' })} ${date.getHours()}:00`;
-      }),
+      labels: filteredData.map(point => moment(point.timestamp).format('ddd HH:00')),
       datasets: [{
         label: 'Price',
         data: filteredData.map(point => point.price),
@@ -88,20 +91,16 @@ export class ChartService {
     };
   }
 
-  private prepareMonthChartData(priceHistory: PricePoint[], currentDate: Date): ChartDataset {
-    const startOfMonth = new Date(currentDate);
-    startOfMonth.setMonth(startOfMonth.getMonth() - 1);
+  private prepareMonthChartData(priceHistory: PricePoint[], currentDate: Moment): ChartDataset {
+    const startOfMonth = moment(currentDate).subtract(1, 'month');
 
     const filteredData = priceHistory.filter(point => {
-      const pointDate = new Date(point.timestamp);
-      return pointDate >= startOfMonth && pointDate <= currentDate;
+      const pointDate = moment(point.timestamp);
+      return pointDate.isBetween(startOfMonth, currentDate, 'minute', '[]');
     });
 
     return {
-      labels: filteredData.map(point => {
-        const date = new Date(point.timestamp);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      }),
+      labels: filteredData.map(point => moment(point.timestamp).format('MMM D')),
       datasets: [{
         label: 'Price',
         data: filteredData.map(point => point.price),
@@ -125,22 +124,5 @@ export class ChartService {
         tension: 0.4
       }]
     };
-  }
-
-  // Public methods
-  selectStock(stockId: string) {
-    this.selectedStockId.set(stockId);
-  }
-
-  updateTimeframe(timeframe: TimeframeOption) {
-    this.selectedTimeframe.set(timeframe);
-  }
-
-  getSelectedTimeframe() {
-    return this.selectedTimeframe;
-  }
-
-  getSelectedStockId() {
-    return this.selectedStockId;
   }
 }

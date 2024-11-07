@@ -4,6 +4,7 @@ import { ChartModule } from 'primeng/chart';
 import { ChartService } from '../../services/chart.service';
 import { SimulationService } from '../../services/simulation.service';
 import { TimeframeOption } from '../../models/types';
+import * as moment from 'moment';
 
 @Component({
   selector: 'app-chart-panel',
@@ -40,7 +41,7 @@ import { TimeframeOption } from '../../models/types';
         </div>
 
         <div class="mt-2 text-sm text-gray-500">
-          {{ currentDate() | date:'medium' }}
+          {{ formatDate(currentDate()) }}
         </div>
       </div>
 
@@ -48,7 +49,7 @@ import { TimeframeOption } from '../../models/types';
         <p-chart
           type="line"
           [data]="chartService.chartData()"
-          [options]="options"
+          [options]="chartOptions"
         ></p-chart>
       </div>
     </div>
@@ -56,17 +57,12 @@ import { TimeframeOption } from '../../models/types';
 })
 export class ChartPanelComponent {
   readonly chartService = inject(ChartService);
-  readonly simulationService = inject(SimulationService);
+  private readonly simulationService = inject(SimulationService);
 
-  readonly availableStocks = computed(() => {
-    return this.simulationService.getStocks()();
-  });
+  readonly availableStocks = computed(() => this.simulationService.getStocks()());
+  readonly currentDate = computed(() => this.simulationService.getSimulationConfig()().currentDate);
 
-  readonly currentDate = computed(() => {
-    return this.simulationService.getSimulationConfig()().currentDate;
-  });
-
-  readonly options = {
+  readonly chartOptions = {
     maintainAspectRatio: true,
     plugins: {
       legend: {
@@ -83,9 +79,7 @@ export class ChartPanelComponent {
         padding: 10,
         displayColors: false,
         callbacks: {
-          label: (context: any) => {
-            return `$${context.parsed.y.toFixed(2)}`;
-          }
+          label: (context: any) => `$${context.parsed.y.toFixed(2)}`
         }
       }
     },
@@ -129,11 +123,11 @@ export class ChartPanelComponent {
     }
   };
 
-  selectStock(stockId: string) {
+  selectStock(stockId: string): void {
     this.chartService.selectStock(stockId);
   }
 
-  onTimeframeChange(timeframe: TimeframeOption) {
+  onTimeframeChange(timeframe: TimeframeOption): void {
     this.chartService.updateTimeframe(timeframe);
   }
 
@@ -151,5 +145,9 @@ export class ChartPanelComponent {
         ? 'bg-blue-500 text-white'
         : 'bg-gray-100 hover:bg-gray-200'
     }`;
+  }
+
+  formatDate(date: moment.Moment): string {
+    return date.format('YYYY-MM-DD HH:mm:ss');
   }
 }

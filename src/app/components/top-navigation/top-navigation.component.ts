@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AccountService } from "../../services/account.service";
 import { SimulationService } from "../../services/simulation.service";
+import * as moment from 'moment';
 
 @Component({
   selector: 'app-top-navigation',
@@ -14,7 +15,6 @@ import { SimulationService } from "../../services/simulation.service";
         <div class="flex items-center space-x-6">
           <div class="text-2xl font-bold text-blue-600">EasyTrade</div>
 
-          <!-- Kontrola Symulacji -->
           <div class="flex items-center space-x-3">
             <button
               (click)="toggleSimulation()"
@@ -33,7 +33,7 @@ import { SimulationService } from "../../services/simulation.service";
               <option value="50">20x Speed</option>
             </select>
             <span class="text-sm text-gray-600">
-              {{ simulationConfig().currentDate | date:'medium' }}
+              {{ formatDate(simulationConfig().currentDate) }}
             </span>
           </div>
         </div>
@@ -55,15 +55,14 @@ import { SimulationService } from "../../services/simulation.service";
   `
 })
 export class TopNavigationComponent {
-  readonly accountService = inject(AccountService);
-  readonly simulationService = inject(SimulationService);
+  private readonly accountService = inject(AccountService);
+  private readonly simulationService = inject(SimulationService);
 
-  accountData = toSignal(this.accountService.accountData$);
-
+  readonly accountData = toSignal(this.accountService.accountData$);
   readonly simulationConfig = computed(() => this.simulationService.getSimulationConfig()());
   readonly isSimulationRunning = computed(() => this.simulationConfig().isRunning);
 
-  toggleSimulation() {
+  toggleSimulation(): void {
     if (this.isSimulationRunning()) {
       this.simulationService.stopSimulation();
     } else {
@@ -71,7 +70,7 @@ export class TopNavigationComponent {
     }
   }
 
-  setSimulationSpeed(event: Event) {
+  setSimulationSpeed(event: Event): void {
     const speed = Number((event.target as HTMLSelectElement).value);
     this.simulationService.setSimulationSpeed(speed);
   }
@@ -82,5 +81,9 @@ export class TopNavigationComponent {
         ? 'bg-red-500 hover:bg-red-600 text-white'
         : 'bg-green-500 hover:bg-green-600 text-white'
     }`;
+  }
+
+  formatDate(date: moment.Moment): string {
+    return date.format('YYYY-MM-DD HH:mm:ss');
   }
 }

@@ -1,3 +1,5 @@
+import { Moment } from 'moment';
+
 export interface AccountData {
   balance: number;
   username: string;
@@ -50,17 +52,6 @@ export interface LearningCard {
   route: string;
 }
 
-export interface ChartData {
-  labels: string[];
-  datasets: {
-    label: string;
-    data: number[];
-    fill: boolean;
-    borderColor: string;
-    tension: number;
-  }[];
-}
-
 export interface TradeOrder {
   symbol: string;
   type: 'buy' | 'sell';
@@ -70,14 +61,12 @@ export interface TradeOrder {
 
 export type TimeframeOption = '1D' | '1W' | '1M';
 
-// Okresy wpływu wskaźnika
 export enum IndicatorTimeframe {
   SHORT = 'short',   // dni
   MEDIUM = 'medium', // tygodnie
   LONG = 'long'     // miesiące
 }
 
-// Struktura pojedynczego wskaźnika
 export interface Indicator {
   name: string;
   value: number;
@@ -89,7 +78,6 @@ export interface Indicator {
   volatility: number;
 }
 
-// Podstawowe typy dla spółki
 export interface Stock {
   id: string;
   name: string;
@@ -97,23 +85,21 @@ export interface Stock {
   currentPrice: number;
   indicators: Indicator[];
   priceHistory: PricePoint[];
+  momentum: number;
 }
 
-// Konfiguracja symulacji
 export interface SimulationConfig {
-  speed: number;        // prędkość symulacji (ms na dzień)
-  isRunning: boolean;   // czy symulacja działa
-  currentDate: Date;    // aktualny dzień symulacji
+  speed: number;
+  isRunning: boolean;
+  currentDate: Moment;
 }
 
-// Zachowujemy istniejące typy związane z ceną
 export interface PricePoint {
   timestamp: number;
   price: number;
   volume: number;
 }
 
-// Do generowania wykresu
 export interface ChartDataset {
   labels: string[];
   datasets: Array<{
