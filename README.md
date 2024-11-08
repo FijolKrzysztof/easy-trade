@@ -50,10 +50,6 @@ This platform aims to:
 
 ## Getting Started
 
-### Prerequisites
-- Node.js (v20 or higher)
-- npm (v10 or higher)
-
 ### Installation
 
 1. Clone the repository
