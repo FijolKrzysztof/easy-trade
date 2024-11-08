@@ -30,4 +30,5 @@ export interface PortfolioSummary {
   cashBalance: number;
   unrealizedPL: number;
   totalEquity: number;
+  totalReturn: number;
 }

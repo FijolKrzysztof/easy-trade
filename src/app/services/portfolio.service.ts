@@ -7,15 +7,26 @@ import { TradeOrder } from '../types/trading';
   providedIn: 'root'
 })
 export class PortfolioService {
+  private readonly INITIAL_CASH_BALANCE = 10000;
   private readonly portfolioSubject = new BehaviorSubject<PortfolioPosition[]>([]);
-  private readonly cashBalanceSubject = new BehaviorSubject<number>(10000); // początkowa gotówka
+  private readonly cashBalanceSubject = new BehaviorSubject<number>(this.INITIAL_CASH_BALANCE);
+  private readonly portfolioSummarySubject = new BehaviorSubject<PortfolioSummary>({
+    totalValue: 0,
+    cashBalance: this.INITIAL_CASH_BALANCE,
+    unrealizedPL: 0,
+    totalEquity: this.INITIAL_CASH_BALANCE,
+    totalReturn: 0
+  });
 
   portfolio$ = this.portfolioSubject.asObservable();
   cashBalance$ = this.cashBalanceSubject.asObservable();
+  portfolioSummary$ = this.portfolioSummarySubject.asObservable();
 
   updateCashBalance(amount: number): void {
     const currentBalance = this.cashBalanceSubject.value;
-    this.cashBalanceSubject.next(currentBalance + amount);
+    const newBalance = currentBalance + amount;
+    this.cashBalanceSubject.next(newBalance);
+    this.updatePortfolioSummary();
   }
 
   getCashBalance(): number {
@@ -28,8 +39,6 @@ export class PortfolioService {
 
   addPosition(order: TradeOrder, commission: number): void {
     const totalCost = (order.shares * order.price) + commission;
-    this.updateCashBalance(-totalCost);
-
     const currentPortfolio = this.portfolioSubject.value;
     const existingPosition = currentPortfolio.find(p => p.symbol === order.symbol);
 
@@ -61,12 +70,12 @@ export class PortfolioService {
 
       this.portfolioSubject.next([...currentPortfolio, newPosition]);
     }
+
+    this.updateCashBalance(-totalCost);
   }
 
   reducePosition(order: TradeOrder, commission: number): void {
     const proceeds = (order.shares * order.price) - commission;
-    this.updateCashBalance(proceeds);
-
     const currentPortfolio = this.portfolioSubject.value;
     const existingPosition = currentPortfolio.find(p => p.symbol === order.symbol);
 
@@ -91,9 +100,10 @@ export class PortfolioService {
 
       this.updatePosition(updatedPosition);
     }
+
+    this.updateCashBalance(proceeds);
   }
 
-  // Nowa metoda do aktualizacji cen z symulacji
   updateMarketPrices(prices: { [symbol: string]: number }): void {
     const currentPortfolio = this.portfolioSubject.value;
     if (currentPortfolio.length === 0) return;
@@ -112,6 +122,7 @@ export class PortfolioService {
     });
 
     this.portfolioSubject.next(updatedPortfolio);
+    this.updatePortfolioSummary();
   }
 
   private updatePosition(updatedPosition: PortfolioPosition): void {
@@ -121,18 +132,30 @@ export class PortfolioService {
         p.symbol === updatedPosition.symbol ? updatedPosition : p
       )
     );
+    this.updatePortfolioSummary();
   }
 
-  getPortfolioSummary(): PortfolioSummary {
+  private updatePortfolioSummary(): void {
     const portfolio = this.portfolioSubject.value;
     const totalValue = portfolio.reduce((sum, pos) => sum + pos.value, 0);
     const unrealizedPL = portfolio.reduce((sum, pos) => sum + pos.unrealizedPL, 0);
+    const cashBalance = this.cashBalanceSubject.value;
+    const currentEquity = totalValue + cashBalance;
 
-    return {
+    const totalReturn = ((currentEquity - this.INITIAL_CASH_BALANCE) / this.INITIAL_CASH_BALANCE) * 100;
+
+    const summary: PortfolioSummary = {
       totalValue,
-      cashBalance: this.cashBalanceSubject.value,
+      cashBalance,
       unrealizedPL,
-      totalEquity: totalValue + this.cashBalanceSubject.value
+      totalEquity: currentEquity,
+      totalReturn
     };
+
+    this.portfolioSummarySubject.next(summary);
+  }
+
+  getPortfolioSummary(): PortfolioSummary {
+    return this.portfolioSummarySubject.value;
   }
 }

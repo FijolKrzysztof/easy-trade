@@ -1,7 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PortfolioService } from '../../services/portfolio.service';
-import { HistoricalTrackingService } from '../../services/historical-tracking.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
@@ -10,7 +9,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
   imports: [CommonModule],
   template: `
     <div class="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
-      <!-- Header section -->
       <div class="p-4 border-b border-gray-100">
         <div class="flex justify-between items-center">
           <h2 class="text-lg font-semibold">Your Portfolio</h2>
@@ -25,7 +23,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
         </div>
       </div>
 
-      <!-- Portfolio positions -->
       <div class="p-4">
         <div class="space-y-3">
           @for (item of portfolio(); track item.symbol) {
@@ -59,13 +56,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
         @if (portfolio().length > 0) {
           <div class="mt-4 pt-4 border-t border-gray-100">
-            <div class="grid grid-cols-3 gap-4">
-              <div class="p-3 bg-gray-50 rounded-lg">
-                <div class="text-sm text-gray-500">Daily Change</div>
-                <div [class]="getPercentageClass(dailyChange())">
-                  {{ dailyChange() > 0 ? '+' : '' }}{{ dailyChange().toFixed(2) }}%
-                </div>
-              </div>
+            <div class="grid grid-cols-2 gap-4">
               <div class="p-3 bg-gray-50 rounded-lg">
                 <div class="text-sm text-gray-500">Total Return</div>
                 <div [class]="getPercentageClass(totalReturn())">
@@ -87,41 +78,14 @@ import { toSignal } from '@angular/core/rxjs-interop';
 })
 export class PortfolioComponent {
   readonly portfolioService = inject(PortfolioService);
-  readonly historicalService = inject(HistoricalTrackingService);
 
   portfolio = toSignal(this.portfolioService.portfolio$, { initialValue: [] });
-  historicalData = toSignal(this.historicalService.historicalData$, { initialValue: [] });
+  portfolioSummary = toSignal(this.portfolioService.portfolioSummary$);
 
-  cashBalance = computed(() => this.portfolioService.getCashBalance());
-
-  totalEquity = computed(() => {
-    const summary = this.portfolioService.getPortfolioSummary();
-    return summary.totalEquity;
-  });
-
-  totalUnrealizedPL = computed(() => {
-    return this.portfolio().reduce((sum, item) => sum + item.unrealizedPL, 0);
-  });
-
-  dailyChange = computed(() => {
-    const history = this.historicalData();
-    if (history.length < 2) return 0;
-
-    const previousValue = history[history.length - 2].totalEquity;
-    const currentValue = history[history.length - 1].totalEquity;
-
-    return ((currentValue - previousValue) / previousValue) * 100;
-  });
-
-  totalReturn = computed(() => {
-    const history = this.historicalData();
-    if (history.length === 0) return 0;
-
-    const initialValue = history[0].totalEquity;
-    const currentValue = this.totalEquity();
-
-    return ((currentValue - initialValue) / initialValue) * 100;
-  });
+  cashBalance = computed(() => this.portfolioSummary()?.cashBalance ?? 0);
+  totalEquity = computed(() => this.portfolioSummary()?.totalEquity ?? 0);
+  totalUnrealizedPL = computed(() => this.portfolioSummary()?.unrealizedPL ?? 0);
+  totalReturn = computed(() => this.portfolioSummary()?.totalReturn ?? 0);
 
   getPriceChange(item: any): number {
     return ((item.currentPrice - item.averagePrice) / item.averagePrice) * 100;
