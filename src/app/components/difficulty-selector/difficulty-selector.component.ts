@@ -1,20 +1,7 @@
-import { Component, Output, EventEmitter } from '@angular/core';
+import { Component, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PrimeIcons } from 'primeng/api';
-
-interface DifficultyLevel {
-  name: string;
-  icon: string;
-  color: string;
-  bgColor: string;
-  description: string;
-  recommendedLesson: string;
-  features: string[];
-}
-
-interface DifficultyLevels {
-  [key: string]: DifficultyLevel;
-}
+import { DifficultyLevels } from '../../types/ui';
 
 @Component({
   selector: 'app-difficulty-selector',
@@ -39,7 +26,7 @@ interface DifficultyLevels {
 
       <div [class]="'p-4 rounded-lg ' + difficultyLevels[selectedLevel].bgColor + ' bg-opacity-50'">
         <div class="flex flex-col sm:flex-row items-start gap-3">
-          <div class="flex-1 min-w-0"> <!-- dodane min-w-0 dla prawidłowego truncate -->
+          <div class="flex-1 min-w-0">
             <h3 class="font-medium mb-1">{{ difficultyLevels[selectedLevel].description }}</h3>
             <div class="text-sm text-gray-600 overflow-hidden">
               <span class="inline-block w-full">
@@ -48,7 +35,7 @@ interface DifficultyLevels {
             </div>
           </div>
           <div class="flex-shrink-0 flex flex-col sm:flex-row items-start sm:items-center gap-2 text-sm">
-            <div class="flex items-center gap-2 min-w-0"> <!-- dodane min-w-0 -->
+            <div class="flex items-center gap-2 min-w-0">
               <i [class]="PrimeIcons.BOOK + ' flex-shrink-0'"></i>
               <span>Recommended: {{ difficultyLevels[selectedLevel].recommendedLesson }}</span>
             </div>
@@ -66,7 +53,7 @@ interface DifficultyLevels {
   `]
 })
 export class DifficultySelectorComponent {
-  @Output() levelChange = new EventEmitter<string>();
+  levelChange = output<string>();
   PrimeIcons = PrimeIcons;
 
   selectedLevel: string = 'beginner';

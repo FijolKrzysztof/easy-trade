@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { TopNavigationComponent } from '../top-navigation/top-navigation.component';
 import { NotificationBannerComponent } from '../notification-banner/notification-banner.component';
 import { NavigationMenuComponent } from '../navigation-menu/navigation-menu.component';
-import { ChartPanelComponent } from '../chart-panel/chart-panel.component';
+import { ChartPanelComponent } from '../trading-panel/components/chart-panel/chart-panel.component';
 import { TradingPanelComponent } from '../trading-panel/trading-panel.component';
 import { LearningCardsComponent } from '../learning-cards/learning-cards.component';
 import { DifficultySelectorComponent } from '../difficulty-selector/difficulty-selector.component';

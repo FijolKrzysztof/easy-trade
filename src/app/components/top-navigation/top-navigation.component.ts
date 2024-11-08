@@ -55,12 +55,12 @@ import * as moment from 'moment';
   `
 })
 export class TopNavigationComponent {
-  private readonly accountService = inject(AccountService);
-  private readonly simulationService = inject(SimulationService);
+  readonly accountService = inject(AccountService);
+  readonly simulationService = inject(SimulationService);
 
-  readonly accountData = toSignal(this.accountService.accountData$);
-  readonly simulationConfig = computed(() => this.simulationService.getSimulationConfig()());
-  readonly isSimulationRunning = computed(() => this.simulationConfig().isRunning);
+  accountData = toSignal(this.accountService.accountData$);
+  simulationConfig = computed(() => this.simulationService.getSimulationConfig()());
+  isSimulationRunning = computed(() => this.simulationConfig().isRunning);
 
   toggleSimulation(): void {
     if (this.isSimulationRunning()) {

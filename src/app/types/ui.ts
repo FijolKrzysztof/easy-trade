@@ -1,3 +1,17 @@
+export interface DifficultyLevel {
+  name: string;
+  icon: string;
+  color: string;
+  bgColor: string;
+  description: string;
+  recommendedLesson: string;
+  features: string[];
+}
+
+export interface DifficultyLevels {
+  [key: string]: DifficultyLevel;
+}
+
 export interface NavigationItem {
   name: string;
   icon: string;
