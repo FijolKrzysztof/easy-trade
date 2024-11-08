@@ -55,7 +55,7 @@ This platform aims to:
 1. Clone the repository
 ```bash
 git clone https://github.com/fijolkrzysztof/easy-trade.git
-cd easytrade
+cd easy-trade
 ```
 
 2. Install dependencies
