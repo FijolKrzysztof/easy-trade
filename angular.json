@@ -15,6 +15,7 @@
           "options": {
             "outputPath": "dist/easy-trade",
             "index": "src/index.html",
+            "baseHref": "/easy-trade/",
             "browser": "src/main.ts",
             "polyfills": [
               "zone.js"
