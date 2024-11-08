@@ -100,7 +100,7 @@ export class BeginnerTradeFormComponent implements OnInit {
   errorMessage: string | null = null;
 
   stocks = this.simulationService.getStocks();
-  isProcessing = toSignal(this.tradeService.isProcessing$, { initialValue: false });
+  isProcessing = toSignal(this.tradeService.isProcessing$, {initialValue: false});
 
   constructor(private fb: FormBuilder) {
     this.tradeForm = this.fb.group({
@@ -144,43 +144,23 @@ export class BeginnerTradeFormComponent implements OnInit {
 
   async onSubmitWithConfirmation(type: 'buy' | 'sell') {
     if (this.tradeForm.valid) {
-      const confirmed = await this.showConfirmationDialog(type);
-      if (confirmed) {
-        try {
-          const order = {
-            symbol: this.tradeForm.get('symbol')?.value,
-            shares: Number(this.tradeForm.get('amount')?.value),
-            type: type,
-            orderType: 'market' as 'market',
-            price: this.getCurrentPrice()
-          };
+      const order = {
+        symbol: this.tradeForm.get('symbol')?.value,
+        shares: Number(this.tradeForm.get('amount')?.value),
+        type: type,
+        orderType: 'market' as 'market',
+        price: this.getCurrentPrice()
+      };
 
-          const result = this.tradeService.executeMarketOrder(order);
+      const result = this.tradeService.executeMarketOrder(order);
 
-          if (result.success) {
-            this.tradeForm.reset();
-            this.errorMessage = null;
-            this.orderSubmitted.emit();
-          } else {
-            this.errorMessage = result.error as string;
-          }
-        } catch (error) {
-          this.errorMessage = error instanceof Error ? error.message : 'An error occurred';
-        }
+      if (result.success) {
+        this.tradeForm.reset();
+        this.errorMessage = null;
+        this.orderSubmitted.emit();
+      } else {
+        this.errorMessage = result.error as string;
       }
     }
-  }
-
-  private async showConfirmationDialog(type: 'buy' | 'sell'): Promise<boolean> {
-    const symbol = this.tradeForm.get('symbol')?.value;
-    const amount = this.tradeForm.get('amount')?.value;
-    const currentPrice = this.getCurrentPrice();
-    const total = amount * currentPrice;
-
-    return window.confirm(
-      `Are you sure you want to ${type} ${amount} shares of ${symbol}?\n\n` +
-      `Current Price: ${currentPrice.toFixed(2)}\n` +
-      `Total Value: $${total.toFixed(2)}`
-    );
   }
 }
