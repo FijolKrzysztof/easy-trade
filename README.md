@@ -54,7 +54,7 @@ This platform aims to:
 
 1. Clone the repository
 ```bash
-git clone https://github.com/fijolkrzysztof/easytrade.git
+git clone https://github.com/fijolkrzysztof/easy-trade.git
 cd easytrade
 ```
 
