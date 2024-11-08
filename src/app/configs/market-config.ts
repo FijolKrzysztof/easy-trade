@@ -25,6 +25,15 @@ export const SIMULATION_PARAMS = {
   FUNDAMENTAL_IMPACT_FACTOR: 0.000001 // doesn't impact historical data
 };
 
+export const COMMISSION_CONFIG = {
+  BASE_COMMISSION_RATE: 0.0035,
+  MIN_COMMISSION: 0.35,
+  MARKET_ORDER_ROUTING_FEE: 0.0030,
+  LARGE_TRADE_FEE: 0.0002,
+  FINRA_TAF: 0.000119,
+  SEC_FEE_RATE: 0.02
+};
+
 export const TECHNICAL_INDICATORS: Record<TechnicalIndicatorType, TechnicalIndicatorConfig> = {
   [TechnicalIndicatorType.RSI]: {
     type: TechnicalIndicatorType.RSI,

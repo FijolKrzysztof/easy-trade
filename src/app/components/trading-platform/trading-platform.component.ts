@@ -8,7 +8,6 @@ import { ChartPanelComponent } from '../chart-panel/chart-panel.component';
 import { TradingPanelComponent } from '../trading-panel/trading-panel.component';
 import { LearningCardsComponent } from '../learning-cards/learning-cards.component';
 import { DifficultySelectorComponent } from '../difficulty-selector/difficulty-selector.component';
-import { TradeOrder } from '../../types/trading';
 
 @Component({
   selector: 'app-easy-trade',
@@ -47,14 +46,10 @@ import { TradeOrder } from '../../types/trading';
 
         <app-trading-panel
           [difficultyLevel]="selectedDifficulty"
-          (orderSubmit)="executeOrder($event)"
         />
       </div>
 
-      <app-learning-cards
-        [cards]="learningCards()"
-        (cardAction)="navigateToSection($event)"
-      />
+      <app-learning-cards />
     </div>
   `
 })
@@ -64,46 +59,7 @@ export class TradingPlatformComponent {
   showNotification = signal(true);
   selectedDifficulty: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
 
-  learningCards = signal([
-    {
-      title: 'Getting Started',
-      icon: `<i class="pi pi-play text-blue-500"></i>`,
-      progress: 65,
-      actionText: 'Continue learning',
-      route: '/learn/getting-started'
-    },
-    {
-      title: 'Market Analysis',
-      icon: `<i class="pi pi-chart-line text-blue-500"></i>`,
-      description: 'Learn how to analyze stocks',
-      actionText: 'Start course',
-      route: '/learn/market-analysis'
-    },
-    {
-      title: 'Community Tips',
-      icon: `<i class="pi pi-users text-blue-500"></i>`,
-      stats: 'Active users: 1,234',
-      actionText: 'Join discussion',
-      route: '/community/tips'
-    },
-    {
-      title: 'Achievements',
-      icon: `<i class="pi pi-star-fill text-blue-500"></i>`,
-      stats: '2/10 badges earned',
-      actionText: 'View all',
-      route: '/achievements'
-    }
-  ]);
-
   onDifficultyChange(level: string) {
     this.selectedDifficulty = level as 'beginner' | 'intermediate' | 'advanced';
-  }
-
-  executeOrder(order: TradeOrder): void {
-    console.log('Executing order:', order);
-  }
-
-  navigateToSection(route: string): void {
-    this.router.navigate([route]);
   }
 }

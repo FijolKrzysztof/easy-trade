@@ -1,0 +1,75 @@
+<form [formGroup]="tradeForm" class="space-y-4">
+  <div>
+    <label class="text-sm text-gray-600 mb-1 block">Stock Symbol</label>
+    <select
+      formControlName="symbol"
+      class="w-full p-2 border rounded bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500"
+    >
+      <option value="">Select a stock...</option>
+      @for (stock of getStocks(); track stock.ticker) {
+        <option [value]="stock.ticker">
+          {{ stock.ticker }} - {{ stock.name }}
+        </option>
+      }
+    </select>
+    @if (tradeForm.get('symbol')?.errors?.['required'] && tradeForm.get('symbol')?.touched) {
+      <span class="text-xs text-red-500">Symbol is required</span>
+    }
+  </div>
+
+  <div>
+    <label class="text-sm text-gray-600 mb-1 block">Amount</label>
+    <div class="relative">
+      <input
+        type="number"
+        formControlName="amount"
+        class="w-full p-2 border rounded bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500"
+        placeholder="Number of shares"
+        min="1"
+        step="1"
+      />
+    </div>
+    @if (tradeForm.get('amount')?.errors?.['required'] && tradeForm.get('amount')?.touched) {
+      <span class="text-xs text-red-500">Amount is required</span>
+    }
+    @if (tradeForm.get('amount')?.errors?.['min'] && tradeForm.get('amount')?.touched) {
+      <span class="text-xs text-red-500">Amount must be at least 1</span>
+    }
+    @if (tradeForm.get('amount')?.errors?.['max'] && tradeForm.get('amount')?.touched) {
+      <span class="text-xs text-red-500">Amount cannot exceed 100,000</span>
+    }
+  </div>
+
+  <div class="mb-4">
+    <app-commission-info
+      level="beginner"
+      [estimatedValue]="estimatedValue"
+      [amount]="tradeForm.get('amount')?.value || 0"
+    />
+  </div>
+
+  <div class="flex space-x-2">
+    <button
+      type="button"
+      (click)="onSubmit('buy')"
+      [disabled]="!tradeForm.valid"
+      class="flex-1 bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors disabled:opacity-50"
+    >
+      Buy
+    </button>
+    <button
+      type="button"
+      (click)="onSubmit('sell')"
+      [disabled]="!tradeForm.valid"
+      class="flex-1 bg-red-500 text-white p-2 rounded hover:bg-red-600 transition-colors disabled:opacity-50"
+    >
+      Sell
+    </button>
+  </div>
+</form>
+
+@if (errorMessage) {
+  <div class="mt-4 p-3 bg-red-100 text-red-700 rounded">
+    {{ errorMessage }}
+  </div>
+}

@@ -72,7 +72,6 @@ export class SimulationService {
     const isQuarterEnd = this.isQuarterEnd(currentMoment);
     const updatedStocks = stocks.map(stock => this.updateStock(stock, currentMoment, isQuarterEnd));
 
-    // Aktualizacja cen w portfolio
     const marketPrices = updatedStocks.reduce((prices, stock) => {
       prices[stock.ticker] = stock.currentPrice;
       return prices;

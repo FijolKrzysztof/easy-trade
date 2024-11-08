@@ -19,7 +19,6 @@ export class PortfolioService {
   });
 
   portfolio$ = this.portfolioSubject.asObservable();
-  cashBalance$ = this.cashBalanceSubject.asObservable();
   portfolioSummary$ = this.portfolioSummarySubject.asObservable();
 
   updateCashBalance(amount: number): void {

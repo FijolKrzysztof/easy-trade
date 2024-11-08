@@ -22,5 +22,6 @@ import { CommonModule } from '@angular/common';
   `
 })
 export class OrderTypeComparisonComponent {
+
   @Input() orderCosts: Record<string, number> = {};
 }

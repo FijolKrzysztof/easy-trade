@@ -1,10 +1,9 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PortfolioComponent } from '../portfolio/portfolio.component';
-import { BeginnerTradeFormComponent } from '../trading-forms/beginner-trade-form.component';
-import { IntermediateTradeFormComponent } from '../trading-forms/intermediate-trade-form.component';
-import { AdvancedTradeFormComponent } from '../trading-forms/advanced-trade-form.component';
-import { TradeOrder } from '../../types/trading';
+import { BeginnerTradeFormComponent } from './components/beginner-trade-form/beginner-trade-form.component';
+import { IntermediateTradeFormComponent } from './components/intermediate-trade-form/intermediate-trade-form.component';
+import { AdvancedTradeFormComponent } from './components/advanced-trade-form/advanced-trade-form.component';
 
 @Component({
   selector: 'app-trading-panel',
@@ -23,10 +22,9 @@ import { TradeOrder } from '../../types/trading';
           <h2 class="text-lg font-semibold">Quick Trade</h2>
         </div>
         <div class="p-4">
-          @switch (difficultyLevel) {
+          @switch (difficultyLevel()) {
             @case ('beginner') {
-              <app-beginner-trade-form
-              />
+              <app-beginner-trade-form />
             }
             @case ('intermediate') {
               <app-intermediate-trade-form
@@ -47,14 +45,9 @@ import { TradeOrder } from '../../types/trading';
   `
 })
 export class TradingPanelComponent {
-  @Input() difficultyLevel: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
-  @Output() orderSubmit = new EventEmitter<TradeOrder>();
+  difficultyLevel = input<'beginner' | 'intermediate' | 'advanced'>('beginner');
 
   submitOrder(order: { type: 'buy' | 'sell'; data: any }) {
-    this.orderSubmit.emit({
-      ...order.data,
-      type: order.type,
-      difficultyLevel: this.difficultyLevel
-    });
+    // TODO: implement
   }
 }

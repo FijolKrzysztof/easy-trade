@@ -1,45 +1,28 @@
 import { Injectable } from '@angular/core';
-
-export interface CommissionConfig {
-  baseCommissionRate: number;
-  minCommission: number;
-  marketOrderRoutingFee: number;
-  largeTradeFee: number;
-  finraTaf: number;
-  secFeeRate: number;
-}
+import { COMMISSION_CONFIG } from '../configs/market-config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CommissionService {
-  private readonly defaultConfig: CommissionConfig = {
-    baseCommissionRate: 0.0035,
-    minCommission: 0.35,
-    marketOrderRoutingFee: 0.0030,
-    largeTradeFee: 0.0002,
-    finraTaf: 0.000119,
-    secFeeRate: 0.02
-  };
-
   calculateCommission(shares: number): number {
-    const commission = shares * this.defaultConfig.baseCommissionRate;
-    return Math.max(commission, this.defaultConfig.minCommission);
+    const commission = shares * COMMISSION_CONFIG.BASE_COMMISSION_RATE;
+    return Math.max(commission, COMMISSION_CONFIG.MIN_COMMISSION);
   }
 
   calculateExchangeFee(shares: number, orderType: string): number {
     if (orderType === 'market') {
-      return shares * this.defaultConfig.marketOrderRoutingFee;
+      return shares * COMMISSION_CONFIG.MARKET_ORDER_ROUTING_FEE;
     }
     if (shares >= 10000) {
-      return shares * this.defaultConfig.largeTradeFee;
+      return shares * COMMISSION_CONFIG.LARGE_TRADE_FEE;
     }
     return 0;
   }
 
   calculateRegulatoryFees(shares: number, estimatedValue: number): number {
-    const finraFee = shares * this.defaultConfig.finraTaf;
-    const secFee = (estimatedValue / 1000) * this.defaultConfig.secFeeRate;
+    const finraFee = shares * COMMISSION_CONFIG.FINRA_TAF;
+    const secFee = (estimatedValue / 1000) * COMMISSION_CONFIG.SEC_FEE_RATE;
     return finraFee + secFee;
   }
 
