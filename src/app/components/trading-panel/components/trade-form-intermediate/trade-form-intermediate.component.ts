@@ -1,17 +1,17 @@
 import { Component, EventEmitter, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { CommissionInfoComponent } from '../commission-info/commission-info.component';
 import { Stock } from '../../../../types/market';
 import { INITIAL_STOCKS } from '../../../../data/market-data';
+import { CommissionPanelComponent } from '../commission-info/commission-info.component';
 
 @Component({
-  selector: 'app-intermediate-trade-form',
+  selector: 'app-trade-form-intermediate',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CommissionInfoComponent],
-  templateUrl: 'intermediate-trade-form.component.html',
+  imports: [CommonModule, ReactiveFormsModule, CommissionPanelComponent],
+  templateUrl: 'trade-form-intermediate.component.html',
 })
-export class IntermediateTradeFormComponent implements OnInit {
+export class TradeFormIntermediateComponent implements OnInit {
   @Output() submitOrder = new EventEmitter<{ type: 'buy' | 'sell'; data: any }>();
 
   tradeForm: FormGroup;

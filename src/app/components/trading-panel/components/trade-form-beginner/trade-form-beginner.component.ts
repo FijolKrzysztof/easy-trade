@@ -1,18 +1,18 @@
 import { Component, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CommissionInfoComponent } from '../commission-info/commission-info.component';
 import { Stock } from '../../../../types/market';
 import { SimulationService } from '../../../../services/simulation.service';
 import { TradeService } from '../../../../services/trade.service';
+import { CommissionPanelComponent } from '../commission-info/commission-info.component';
 
 @Component({
-  selector: 'app-beginner-trade-form',
+  selector: 'app-trade-form-beginner',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CommissionInfoComponent],
-  templateUrl: 'beginner-trade-form.component.html',
+  imports: [CommonModule, ReactiveFormsModule, CommissionPanelComponent],
+  templateUrl: 'trade-form-beginner.component.html',
 })
-export class BeginnerTradeFormComponent {
+export class TradeFormBeginnerComponent {
   readonly simulationService = inject(SimulationService);
   readonly tradeService = inject(TradeService);
   readonly fb = inject(FormBuilder);

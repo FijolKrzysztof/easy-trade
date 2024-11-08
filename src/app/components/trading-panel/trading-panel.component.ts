@@ -1,9 +1,9 @@
 import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PortfolioComponent } from '../portfolio/portfolio.component';
-import { BeginnerTradeFormComponent } from './components/beginner-trade-form/beginner-trade-form.component';
-import { IntermediateTradeFormComponent } from './components/intermediate-trade-form/intermediate-trade-form.component';
-import { AdvancedTradeFormComponent } from './components/advanced-trade-form/advanced-trade-form.component';
+import { TradeFormBeginnerComponent } from './components/trade-form-beginner/trade-form-beginner.component';
+import { TradeFormIntermediateComponent } from './components/trade-form-intermediate/trade-form-intermediate.component';
+import { TradeFormAdvancedComponent } from './components/trade-form-advanced/trade-form-advanced.component';
 
 @Component({
   selector: 'app-trading-panel',
@@ -11,9 +11,9 @@ import { AdvancedTradeFormComponent } from './components/advanced-trade-form/adv
   imports: [
     CommonModule,
     PortfolioComponent,
-    BeginnerTradeFormComponent,
-    IntermediateTradeFormComponent,
-    AdvancedTradeFormComponent
+    TradeFormBeginnerComponent,
+    TradeFormIntermediateComponent,
+    TradeFormAdvancedComponent
   ],
   template: `
     <div class="space-y-4">
@@ -24,17 +24,13 @@ import { AdvancedTradeFormComponent } from './components/advanced-trade-form/adv
         <div class="p-4">
           @switch (difficultyLevel()) {
             @case ('beginner') {
-              <app-beginner-trade-form />
+              <app-trade-form-beginner />
             }
             @case ('intermediate') {
-              <app-intermediate-trade-form
-                (submitOrder)="submitOrder($event)"
-              />
+              <app-trade-form-intermediate />
             }
             @case ('advanced') {
-              <app-advanced-trade-form
-                (submitOrder)="submitOrder($event)"
-              />
+              <app-trade-form-advanced />
             }
           }
         </div>
