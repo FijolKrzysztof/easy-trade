@@ -1,0 +1,38 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Tło -->
+  <rect width="100" height="100" rx="20" fill="#1E293B"/>
+  
+  <!-- Wykres świecowy -->
+  <g stroke="#38BDF8" stroke-width="2">
+    <!-- Świece -->
+    <line x1="20" y1="30" x2="20" y2="70" />
+    <rect x="18" y="35" width="4" height="20" fill="#38BDF8"/>
+    
+    <line x1="35" y1="25" x2="35" y2="75" />
+    <rect x="33" y="55" width="4" height="15" fill="#38BDF8"/>
+    
+    <line x1="50" y1="20" x2="50" y2="80" />
+    <rect x="48" y="30" width="4" height="35" fill="#38BDF8"/>
+    
+    <line x1="65" y1="25" x2="65" y2="75" />
+    <rect x="63" y="40" width="4" height="25" fill="#38BDF8"/>
+    
+    <line x1="80" y1="30" x2="80" y2="70" />
+    <rect x="78" y="45" width="4" height="15" fill="#38BDF8"/>
+  </g>
+
+  <!-- Linia trendu -->
+  <path 
+    d="M15 65 Q 30 60, 45 50 T 85 35" 
+    fill="none" 
+    stroke="#22C55E" 
+    stroke-width="2"
+  />
+
+  <!-- Znaczniki poziomów -->
+  <g fill="#CBD5E1" font-size="8">
+    <circle cx="15" cy="25" r="2"/>
+    <circle cx="15" cy="50" r="2"/>
+    <circle cx="15" cy="75" r="2"/>
+  </g>
+</svg>
