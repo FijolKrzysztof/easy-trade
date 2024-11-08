@@ -5,7 +5,6 @@ import { CommissionInfoComponent } from '../commission-info/commission-info.comp
 import { Stock } from '../../types/market';
 import { SimulationService } from '../../services/simulation.service';
 import { TradeService } from '../../services/trade.service';
-import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-beginner-trade-form',
@@ -66,7 +65,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
         <button
           type="button"
           (click)="onSubmitWithConfirmation('buy')"
-          [disabled]="!tradeForm.valid || isProcessing()"
+          [disabled]="!tradeForm.valid"
           class="flex-1 bg-green-500 text-white p-2 rounded hover:bg-green-600 transition-colors disabled:opacity-50"
         >
           Buy
@@ -74,7 +73,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
         <button
           type="button"
           (click)="onSubmitWithConfirmation('sell')"
-          [disabled]="!tradeForm.valid || isProcessing()"
+          [disabled]="!tradeForm.valid"
           class="flex-1 bg-red-500 text-white p-2 rounded hover:bg-red-600 transition-colors disabled:opacity-50"
         >
           Sell
@@ -100,7 +99,6 @@ export class BeginnerTradeFormComponent implements OnInit {
   errorMessage: string | null = null;
 
   stocks = this.simulationService.getStocks();
-  isProcessing = toSignal(this.tradeService.isProcessing$, {initialValue: false});
 
   constructor(private fb: FormBuilder) {
     this.tradeForm = this.fb.group({
