@@ -1,0 +1,42 @@
+<div class="relative inline-block">
+    <div class="flex items-center cursor-pointer relative" (click)="toggleNotifications()">
+        <i class="pi pi-bell text-blue-500 text-lg sm:text-xl hover:text-blue-600 transition-colors"></i>
+        @if (unreadCount() > 0) {
+            <span class="notification-badge absolute -top-3 -right-3 text-white text-xs min-w-[20px] h-5
+               flex items-center justify-center px-1.5 rounded-full">
+            {{ unreadCount() }}
+        </span>
+        }
+    </div>
+
+    @if (isNotificationsPanelOpen()) {
+        <div
+                [class]="getPanelClass()"
+                @notificationPanel
+        >
+            <div class="p-3 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="font-semibold text-gray-800">Notifications</h3>
+                <span class="text-xs text-gray-500">{{ unreadCount() }} unread</span>
+            </div>
+            <div class="max-h-[min(calc(100vh-150px),600px)] overflow-y-auto">
+                @for (notification of notifications(); track notification.id) {
+                    <div
+                            [class]="getNotificationClass(notification)"
+                            (click)="markAsRead(notification.id)"
+                    >
+                        <h4 class="font-medium text-sm text-blue-600 mb-1 flex items-center justify-between">
+                            {{ notification.title }}
+                            @if (!notification.read) {
+                                <span class="ml-2 inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-600 rounded-full">
+                      New
+                    </span>
+                            }
+                        </h4>
+                        <p class="text-sm text-gray-600 mb-1">{{ notification.message }}</p>
+                        <span class="text-xs text-gray-400">{{ notification.timestamp }}</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

@@ -40,4 +40,12 @@ export interface ChartDataset {
   }>;
 }
 
+export interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+}
+
 export type TimeframeOption = '1D' | '1W' | '1M';
