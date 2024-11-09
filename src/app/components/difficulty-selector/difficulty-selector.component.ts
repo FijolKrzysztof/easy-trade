@@ -54,10 +54,8 @@ import { DifficultyLevels } from '../../types/ui';
 })
 export class DifficultySelectorComponent {
   levelChange = output<string>();
-  PrimeIcons = PrimeIcons;
 
   selectedLevel: string = 'beginner';
-
   difficultyLevels: DifficultyLevels = {
     beginner: {
       name: "Beginner",
@@ -87,6 +85,8 @@ export class DifficultySelectorComponent {
       features: ["All order types", "Advanced charts", "Trading algorithms", "Risk management"]
     }
   };
+
+  readonly PrimeIcons = PrimeIcons;
 
   getDifficultyLevels() {
     return Object.entries(this.difficultyLevels);
