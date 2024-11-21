@@ -43,8 +43,6 @@ This platform aims to:
 ## Tech Stack
 
 - Angular 18
-- Node.js 20
-- npm 10
 - Tailwind CSS
 - PrimeNG Icons
 
